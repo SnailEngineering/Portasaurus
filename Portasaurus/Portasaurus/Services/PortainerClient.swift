@@ -111,6 +111,13 @@ final class PortainerClient: Sendable {
         try await request(path: "/api/system/status")
     }
 
+    // MARK: - Environments
+
+    /// Returns all environments (endpoints) visible to the authenticated user.
+    func endpoints() async throws -> [PortainerEndpoint] {
+        try await request(path: "/api/endpoints")
+    }
+
     // MARK: - Generic Request
 
     /// Performs an API request and decodes the JSON response.
