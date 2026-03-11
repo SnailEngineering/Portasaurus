@@ -3,14 +3,12 @@ import SwiftData
 
 @main
 struct PortasaurusApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
+    private let modelContainer: ModelContainer = {
+        let schema = Schema([SavedServer.self])
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            return try ModelContainer(for: schema, configurations: [config])
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }
@@ -18,8 +16,8 @@ struct PortasaurusApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ServerListView()
         }
-        .modelContainer(sharedModelContainer)
+        .modelContainer(modelContainer)
     }
 }
