@@ -209,7 +209,7 @@ Each phase is designed to be self-contained. Complete one before starting the ne
 The landing experience. Users can add, save, and connect to Portainer servers.
 
 - [x] **1.1** Set up multi-platform target configuration (iOS, macOS, visionOS) in Xcode project
-- [ ] **1.2** Create `PortainerClient` — core networking layer
+- [x] **1.2** Create `PortainerClient` — core networking layer
   - `URLSession`-based with async/await
   - Base URL construction from server host/port/scheme
   - Generic `request<T: Decodable>()` method with JSON encoding/decoding
