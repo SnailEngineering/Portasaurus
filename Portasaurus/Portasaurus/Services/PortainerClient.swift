@@ -1,37 +1,4 @@
 import Foundation
-
-// MARK: - API Error Types
-
-/// Error response body returned by Portainer API.
-struct PortainerAPIError: Decodable, Sendable {
-    let message: String
-    let details: String?
-}
-
-/// Errors that can occur during Portainer API operations.
-enum PortainerClientError: LocalizedError {
-    case invalidURL
-    case unauthorized
-    case apiError(statusCode: Int, apiError: PortainerAPIError)
-    case httpError(statusCode: Int)
-    case decodingError(DecodingError)
-
-    var errorDescription: String? {
-        switch self {
-        case .invalidURL:
-            "Invalid server URL."
-        case .unauthorized:
-            "Authentication required. Please log in again."
-        case .apiError(let statusCode, let apiError):
-            "Server error (\(statusCode)): \(apiError.message)"
-        case .httpError(let statusCode):
-            "Unexpected HTTP response (\(statusCode))."
-        case .decodingError(let error):
-            "Failed to decode response: \(error.localizedDescription)"
-        }
-    }
-}
-
 // MARK: - Re-authentication
 
 /// Provides credentials for re-authentication when a 401 is received.
@@ -41,22 +8,6 @@ protocol PortainerClientAuthDelegate: AnyObject, Sendable {
     func portainerClientNeedsReauthentication(
         _ client: PortainerClient
     ) async -> (username: String, password: String)?
-}
-
-// MARK: - HTTP Method
-
-enum HTTPMethod: String {
-    case get = "GET"
-    case post = "POST"
-    case put = "PUT"
-    case delete = "DELETE"
-}
-
-// MARK: - Auth Response
-
-/// Response from `POST /api/auth`.
-struct AuthResponse: Decodable, Sendable {
-    let jwt: String
 }
 
 // MARK: - PortainerClient
