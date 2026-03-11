@@ -10,6 +10,7 @@ struct ServerListView: View {
     @State private var viewModel = ServerListViewModel()
     @State private var showingAddServer = false
     @State private var activeClient: PortainerClient?
+    @State private var activeServerID: UUID?
     @State private var activeServerName = ""
 
     var body: some View {
@@ -38,8 +39,9 @@ struct ServerListView: View {
 #endif
             }
             .sheet(isPresented: $showingAddServer) {
-                AddServerView { client, name in
+                AddServerView { client, serverID, name in
                     activeClient = client
+                    activeServerID = serverID
                     activeServerName = name
                     showingAddServer = false
                 }
@@ -103,6 +105,7 @@ struct ServerListView: View {
             Task {
                 if let client = await viewModel.connect(to: server) {
                     activeClient = client
+                    activeServerID = server.id
                     activeServerName = server.name
                 }
             }
@@ -152,7 +155,7 @@ struct ServerListView: View {
     private func deleteServers(at offsets: IndexSet) {
         for index in offsets {
             let server = servers[index]
-            if activeServerName == server.name { activeClient = nil; activeServerName = "" }
+            if activeServerID == server.id { activeClient = nil; activeServerID = nil; activeServerName = "" }
             viewModel.delete(server, in: modelContext)
         }
     }

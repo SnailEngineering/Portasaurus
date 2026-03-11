@@ -135,8 +135,9 @@ final class PortainerClient: Sendable {
         authenticated: Bool = true,
         allowRetry: Bool = true
     ) async throws -> T {
-        let url = baseURL.appendingPathComponent(path)
-        guard url.scheme != nil else { throw PortainerClientError.invalidURL }
+        guard let url = URL(string: path, relativeTo: baseURL) else {
+            throw PortainerClientError.invalidURL
+        }
 
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = method.rawValue
@@ -204,13 +205,51 @@ final class PortainerClient: Sendable {
         authenticated: Bool = true,
         allowRetry: Bool = true
     ) async throws {
-        let _: EmptyResponse = try await request(
-            method: method,
-            path: path,
-            body: body,
-            authenticated: authenticated,
-            allowRetry: allowRetry
-        )
+        guard let url = URL(string: path, relativeTo: baseURL) else {
+            throw PortainerClientError.invalidURL
+        }
+
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = method.rawValue
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        if authenticated, let token {
+            urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        if let body {
+            urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            urlRequest.httpBody = try JSONEncoder().encode(body)
+        }
+
+        let (data, response) = try await session.data(for: urlRequest)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw PortainerClientError.httpError(statusCode: -1)
+        }
+
+        let statusCode = httpResponse.statusCode
+
+        // 401 — attempt re-authentication once
+        if statusCode == 401, authenticated, allowRetry,
+           let delegate = authDelegate,
+           let credentials = await delegate.portainerClientNeedsReauthentication(self) {
+            try await authenticate(username: credentials.username, password: credentials.password)
+            try await requestVoid(method: method, path: path, body: body, authenticated: true, allowRetry: false)
+            return
+        }
+
+        if statusCode == 401 {
+            token = nil
+            throw PortainerClientError.unauthorized
+        }
+
+        if statusCode >= 400 {
+            if let apiError = try? JSONDecoder().decode(PortainerAPIError.self, from: data) {
+                throw PortainerClientError.apiError(statusCode: statusCode, apiError: apiError)
+            }
+            throw PortainerClientError.httpError(statusCode: statusCode)
+        }
     }
 }
 
@@ -237,5 +276,4 @@ private struct WeakDelegate: Sendable {
     }
 }
 
-/// Used for decoding responses that may have an empty body.
-private struct EmptyResponse: Decodable {}
+

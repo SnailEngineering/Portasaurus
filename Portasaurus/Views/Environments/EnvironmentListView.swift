@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 /// Lists all Portainer environments (endpoints) for the connected server.
 ///
@@ -110,3 +111,20 @@ struct EnvironmentListView: View {
         }
     }
 }
+// MARK: - Previews
+
+#Preview("Environment List") {
+    EnvironmentListView(
+        client: PortainerClient(serverURL: URL(string: "http://localhost:9000")!),
+        serverName: "My Portainer"
+    )
+}
+
+#Preview("No Server Selected") {
+    ContentUnavailableView {
+        Label("No Server Selected", systemImage: "server.rack")
+    } description: {
+        Text("Select a server from the list to connect.")
+    }
+}
+

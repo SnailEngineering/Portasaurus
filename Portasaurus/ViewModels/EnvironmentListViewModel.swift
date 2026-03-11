@@ -21,7 +21,6 @@ final class EnvironmentListViewModel {
 
     // MARK: - Actions
 
-    @MainActor
     func load(from client: PortainerClient) async {
         isLoading = true
         loadError = nil

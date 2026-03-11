@@ -9,8 +9,8 @@ struct AddServerView: View {
 
     @State private var viewModel = AddServerViewModel()
 
-    /// Called with the connected client and server display name after a successful "Save & Connect".
-    var onConnected: (PortainerClient, String) -> Void
+    /// Called with the connected client, server ID, and display name after a successful "Save & Connect".
+    var onConnected: (PortainerClient, UUID, String) -> Void
 
     var body: some View {
         NavigationStack {
@@ -152,8 +152,8 @@ struct AddServerView: View {
 
     private func saveAndConnect() async {
         do {
-            let client = try await viewModel.saveAndConnect(modelContext: modelContext)
-            onConnected(client, viewModel.name)
+            let (client, serverID) = try await viewModel.saveAndConnect(modelContext: modelContext)
+            onConnected(client, serverID, viewModel.name)
         } catch {
             // Surface the error via testResult so it's visible in the form.
             viewModel.testResult = .failure(error.localizedDescription)
@@ -162,6 +162,6 @@ struct AddServerView: View {
 }
 
 #Preview {
-    AddServerView { _, _ in }
+    AddServerView { _, _, _ in }
         .modelContainer(for: SavedServer.self, inMemory: true)
 }

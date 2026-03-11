@@ -63,6 +63,7 @@ final class ServerListViewModel {
         do {
             try await client.authenticate(username: credentials.username, password: credentials.password)
             try await client.systemStatus()
+            server.lastConnected = Date()
             connectionStates[server.id] = .idle
             return client
         } catch {

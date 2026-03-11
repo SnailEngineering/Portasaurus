@@ -68,9 +68,9 @@ final class AddServerViewModel {
         }
     }
 
-    /// Saves the server to SwiftData + Keychain, authenticates, and returns the connected client.
+    /// Saves the server to SwiftData + Keychain, authenticates, and returns the connected client and server ID.
     @discardableResult
-    func saveAndConnect(modelContext: ModelContext) async throws -> PortainerClient {
+    func saveAndConnect(modelContext: ModelContext) async throws -> (client: PortainerClient, serverID: UUID) {
         guard let client = makeClient() else {
             throw AddServerError.invalidURL
         }
@@ -78,15 +78,24 @@ final class AddServerViewModel {
         isSaving = true
         defer { isSaving = false }
 
+        // Reject duplicate display names before touching the network.
+        let trimmedName = name.trimmingCharacters(in: .whitespaces)
+        let namePredicate = #Predicate<SavedServer> { $0.name == trimmedName }
+        let existing = try modelContext.fetch(FetchDescriptor(predicate: namePredicate))
+        if !existing.isEmpty {
+            throw AddServerError.duplicateName(trimmedName)
+        }
+
         // Authenticate first — fail fast before persisting anything.
         try await client.authenticate(username: username, password: password)
         try await client.systemStatus()
 
         // Persist metadata.
+        guard let port = portValue else { throw AddServerError.invalidURL }
         let server = SavedServer(
-            name: name.trimmingCharacters(in: .whitespaces),
+            name: trimmedName,
             host: host.trimmingCharacters(in: .whitespaces),
-            port: portValue!,
+            port: port,
             usesHTTPS: usesHTTPS,
             username: username.trimmingCharacters(in: .whitespaces),
             trustSelfSignedCertificates: trustSelfSigned
@@ -100,7 +109,7 @@ final class AddServerViewModel {
             serverURL: server.serverURL
         )
 
-        return client
+        return (client, server.id)
     }
 
     // MARK: - Helpers
@@ -120,10 +129,14 @@ final class AddServerViewModel {
 
 enum AddServerError: LocalizedError {
     case invalidURL
+    case duplicateName(String)
 
     var errorDescription: String? {
         switch self {
-        case .invalidURL: "Could not construct a valid server URL from the provided host and port."
+        case .invalidURL:
+            "Could not construct a valid server URL from the provided host and port."
+        case .duplicateName(let name):
+            "A server named \"\(name)\" already exists. Please choose a different name."
         }
     }
 }

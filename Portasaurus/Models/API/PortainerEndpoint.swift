@@ -1,7 +1,7 @@
 import Foundation
 
 /// A Portainer environment (endpoint) — the Docker host to manage.
-struct PortainerEndpoint: Decodable, Identifiable, Sendable {
+struct PortainerEndpoint: Decodable, Identifiable, Hashable, Sendable {
 
     // MARK: - Properties
 
@@ -35,7 +35,7 @@ struct PortainerEndpoint: Decodable, Identifiable, Sendable {
         case kubeConfig       = 6
 
         /// Falls back to `dockerStandalone` for unrecognised values.
-        init(from decoder: any Decoder) throws {
+        nonisolated init(from decoder: any Decoder) throws {
             let raw = try decoder.singleValueContainer().decode(Int.self)
             self = EndpointType(rawValue: raw) ?? .dockerStandalone
         }
@@ -65,14 +65,14 @@ struct PortainerEndpoint: Decodable, Identifiable, Sendable {
         case up   = 1
         case down = 2
 
-        init(from decoder: any Decoder) throws {
+        nonisolated init(from decoder: any Decoder) throws {
             let raw = try decoder.singleValueContainer().decode(Int.self)
             self = EndpointStatus(rawValue: raw) ?? .down
         }
     }
 
     /// Container/health summary captured in Portainer's environment snapshot.
-    struct DockerSnapshot: Decodable, Sendable {
+    struct DockerSnapshot: Decodable, Hashable, Sendable {
         let runningContainerCount:   Int
         let stoppedContainerCount:   Int
         let healthyContainerCount:   Int
@@ -92,7 +92,7 @@ struct PortainerEndpoint: Decodable, Identifiable, Sendable {
 
     // MARK: - Convenience
 
-    init(from decoder: any Decoder) throws {
+    nonisolated init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id        = try c.decode(Int.self,          forKey: .id)
         name      = try c.decode(String.self,       forKey: .name)

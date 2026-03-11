@@ -9,6 +9,8 @@ import SwiftData
 @Model
 final class SavedServer {
 
+    #Unique<SavedServer>([\.name])
+
     // MARK: - Stored Properties
 
     var id: UUID
