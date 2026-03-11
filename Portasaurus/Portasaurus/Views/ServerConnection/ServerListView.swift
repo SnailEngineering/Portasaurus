@@ -9,6 +9,8 @@ struct ServerListView: View {
 
     @State private var viewModel = ServerListViewModel()
     @State private var showingAddServer = false
+    @State private var activeClient: PortainerClient?
+    @State private var activeServerName = ""
 
     var body: some View {
         NavigationSplitView {
@@ -36,13 +38,22 @@ struct ServerListView: View {
 #endif
             }
             .sheet(isPresented: $showingAddServer) {
-                AddServerView { _ in
+                AddServerView { client, name in
+                    activeClient = client
+                    activeServerName = name
                     showingAddServer = false
                 }
             }
         } detail: {
-            Text("Select a server to connect")
-                .foregroundStyle(.secondary)
+            if let client = activeClient {
+                EnvironmentListView(client: client, serverName: activeServerName)
+            } else {
+                ContentUnavailableView {
+                    Label("No Server Selected", systemImage: "server.rack")
+                } description: {
+                    Text("Select a server from the list to connect.")
+                }
+            }
         }
     }
 
@@ -82,14 +93,19 @@ struct ServerListView: View {
                 Text(message)
                     .font(.caption2)
                     .foregroundStyle(.red)
-                    .padding(.leading, 36) // align under text, past icon
+                    .padding(.leading, 36)
             }
         }
         .contentShape(Rectangle())
         .onTapGesture {
             guard state != .connecting else { return }
             viewModel.clearError(for: server)
-            Task { await viewModel.connect(to: server) }
+            Task {
+                if let client = await viewModel.connect(to: server) {
+                    activeClient = client
+                    activeServerName = server.name
+                }
+            }
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive) {
@@ -135,7 +151,9 @@ struct ServerListView: View {
 
     private func deleteServers(at offsets: IndexSet) {
         for index in offsets {
-            viewModel.delete(servers[index], in: modelContext)
+            let server = servers[index]
+            if activeServerName == server.name { activeClient = nil; activeServerName = "" }
+            viewModel.delete(server, in: modelContext)
         }
     }
 }
