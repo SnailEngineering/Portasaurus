@@ -23,6 +23,8 @@ final class PortainerClient: Sendable {
 
     private let _token = MutableSendableValue<String?>(nil)
     private let _authDelegate = MutableSendableValue<WeakDelegate?>(nil)
+    // Retained so the URLSession delegate is not deallocated.
+    private let _sslTrustHandler: MutableSendableValue<SSLTrustHandler?>
 
     /// The current JWT token, if authenticated.
     var token: String? {
@@ -39,14 +41,25 @@ final class PortainerClient: Sendable {
     // MARK: - Initialization
 
     /// Creates a client for the given server URL.
-    /// - Parameter serverURL: The base URL of the Portainer server (e.g. `https://portainer.example.com:9443`).
-    init(serverURL: URL) {
+    /// - Parameters:
+    ///   - serverURL: The base URL of the Portainer server (e.g. `https://portainer.example.com:9443`).
+    ///   - trustSelfSigned: When `true`, accepts self-signed / untrusted certificates.
+    ///     Only enable this when the user has explicitly opted in for a given server.
+    init(serverURL: URL, trustSelfSigned: Bool = false) {
         self.baseURL = serverURL
 
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
         config.timeoutIntervalForResource = 300
-        self.session = URLSession(configuration: config)
+
+        if trustSelfSigned {
+            let handler = SSLTrustHandler()
+            self._sslTrustHandler = MutableSendableValue(handler)
+            self.session = URLSession(configuration: config, delegate: handler, delegateQueue: nil)
+        } else {
+            self._sslTrustHandler = MutableSendableValue(nil)
+            self.session = URLSession(configuration: config)
+        }
     }
 
     /// Convenience initializer from URL components.
@@ -54,13 +67,14 @@ final class PortainerClient: Sendable {
     ///   - scheme: `http` or `https`.
     ///   - host: Server hostname or IP.
     ///   - port: Port number (e.g. 9443).
-    convenience init?(scheme: String, host: String, port: Int) {
+    ///   - trustSelfSigned: When `true`, accepts self-signed / untrusted certificates.
+    convenience init?(scheme: String, host: String, port: Int, trustSelfSigned: Bool = false) {
         var components = URLComponents()
         components.scheme = scheme
         components.host = host
         components.port = port
         guard let url = components.url else { return nil }
-        self.init(serverURL: url)
+        self.init(serverURL: url, trustSelfSigned: trustSelfSigned)
     }
 
     // MARK: - Authentication
@@ -87,6 +101,14 @@ final class PortainerClient: Sendable {
 
         token = response.jwt
         return response.jwt
+    }
+
+    // MARK: - System
+
+    /// Fetches the Portainer system status. Useful for validating connectivity after login.
+    @discardableResult
+    func systemStatus() async throws -> PortainerSystemStatus {
+        try await request(path: "/api/system/status")
     }
 
     // MARK: - Generic Request
