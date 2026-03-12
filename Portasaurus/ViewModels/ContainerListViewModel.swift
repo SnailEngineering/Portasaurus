@@ -16,6 +16,15 @@ final class ContainerListViewModel {
     // Confirmation dialog state
     var pendingDestructiveAction: DestructiveAction? = nil
 
+    // MARK: - Init
+
+    init() {}
+
+    /// Preview-only initializer that pre-loads containers without a network call.
+    init(previewContainers: [DockerContainer]) {
+        containers = previewContainers
+    }
+
     // MARK: - Filter
 
     enum StateFilter: String, CaseIterable, Identifiable {

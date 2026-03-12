@@ -9,7 +9,21 @@ struct ContainerListView: View {
     let client: PortainerClient
     let environment: PortainerEndpoint
 
-    @State private var viewModel = ContainerListViewModel()
+    @State private var viewModel: ContainerListViewModel
+    @State private var isPreview = false
+
+    init(client: PortainerClient, environment: PortainerEndpoint) {
+        self.client = client
+        self.environment = environment
+        self._viewModel = State(initialValue: ContainerListViewModel())
+    }
+
+    init(client: PortainerClient, environment: PortainerEndpoint, previewViewModel: ContainerListViewModel) {
+        self.client = client
+        self.environment = environment
+        self._viewModel = State(initialValue: previewViewModel)
+        self._isPreview = State(initialValue: true)
+    }
 
     var body: some View {
         Group {
@@ -31,7 +45,10 @@ struct ContainerListView: View {
         .toolbar { toolbarContent }
         .searchable(text: $viewModel.searchText, prompt: "Search containers")
         .refreshable { await viewModel.load(client: client, endpointId: environment.id) }
-        .task { await viewModel.loadAndAutoRefresh(client: client, endpointId: environment.id) }
+        .task {
+            guard !isPreview else { return }
+            await viewModel.loadAndAutoRefresh(client: client, endpointId: environment.id)
+        }
         .confirmationDialog(
             confirmationTitle,
             isPresented: $viewModel.pendingDestructiveAction.isPresented,
@@ -234,9 +251,9 @@ struct ContainerListView: View {
     private func confirmationMessage(for action: ContainerListViewModel.DestructiveAction) -> String {
         switch action.kind {
         case .kill:
-            return "Forcefully terminate "\(action.container.displayName)"? The container will remain and can be restarted."
+            return "Forcefully terminate \"\(action.container.displayName)\"? The container will remain and can be restarted."
         case .remove:
-            return "Permanently remove "\(action.container.displayName)" and its associated volumes? This cannot be undone."
+            return "Permanently remove \"\(action.container.displayName)\" and its associated volumes? This cannot be undone."
         }
     }
 }
@@ -250,26 +267,73 @@ private extension Optional where Wrapped: Identifiable {
     }
 }
 
-// MARK: - Preview
+// MARK: - Previews
 
-#Preview {
+#Preview("Container List") {
     NavigationStack {
         ContainerListView(
             client: PortainerClient(serverURL: URL(string: "http://localhost:9000")!),
-            environment: .preview
+            environment: .previewMock,
+            previewViewModel: ContainerListViewModel(previewContainers: DockerContainer.mockContainers)
         )
     }
 }
 
-private extension PortainerEndpoint {
-    static let preview = PortainerEndpoint.makeMock()
-
-    static func makeMock() -> PortainerEndpoint {
-        // Decode a minimal JSON stub so we don't need a custom init.
-        let json = """
-        {"Id":1,"Name":"local","Type":1,"Status":1,"URL":"tcp://localhost:2375",
-         "PublicURL":"","Snapshots":[]}
-        """
-        return try! JSONDecoder().decode(PortainerEndpoint.self, from: Data(json.utf8))
+#Preview("Empty — No Containers") {
+    NavigationStack {
+        ContainerListView(
+            client: PortainerClient(serverURL: URL(string: "http://localhost:9000")!),
+            environment: .previewMock,
+            previewViewModel: ContainerListViewModel(previewContainers: [])
+        )
     }
 }
+
+// MARK: - Preview Mock Data
+
+private extension PortainerEndpoint {
+    static let previewMock: PortainerEndpoint = {
+        let json = """
+        {"Id":1,"Name":"production","Type":1,"Status":1,"URL":"tcp://localhost:2375","PublicURL":"","Snapshots":[]}
+        """
+        return try! JSONDecoder().decode(PortainerEndpoint.self, from: Data(json.utf8))
+    }()
+}
+
+private extension DockerContainer {
+    static func make(
+        id: String,
+        name: String,
+        image: String,
+        state: String,
+        status: String
+    ) -> DockerContainer {
+        let json = """
+        {
+          "Id": "\(id)",
+          "Names": ["/\(name)"],
+          "Image": "\(image)",
+          "ImageID": "sha256:abc123",
+          "Command": "/entrypoint.sh",
+          "Created": 1700000000,
+          "State": "\(state)",
+          "Status": "\(status)",
+          "Ports": [],
+          "Labels": {}
+        }
+        """
+        return try! JSONDecoder().decode(DockerContainer.self, from: Data(json.utf8))
+    }
+
+    static let mockContainers: [DockerContainer] = [
+        .make(id: "a1b2c3d4e5f6", name: "nginx-proxy",    image: "nginx:alpine",          state: "running",  status: "Up 3 days"),
+        .make(id: "b2c3d4e5f6a1", name: "postgres-db",    image: "postgres:16",            state: "running",  status: "Up 2 hours"),
+        .make(id: "c3d4e5f6a1b2", name: "redis-cache",    image: "redis:7-alpine",         state: "running",  status: "Up 5 days"),
+        .make(id: "d4e5f6a1b2c3", name: "api-server",     image: "myapp/api:latest",       state: "exited",   status: "Exited (0) 1 hour ago"),
+        .make(id: "e5f6a1b2c3d4", name: "worker-queue",   image: "myapp/worker:v2.1.0",    state: "exited",   status: "Exited (1) 30 minutes ago"),
+        .make(id: "f6a1b2c3d4e5", name: "grafana",        image: "grafana/grafana:latest", state: "running",  status: "Up 12 days"),
+        .make(id: "a1b2c3d4e5f7", name: "prometheus",     image: "prom/prometheus:v2.48",  state: "paused",   status: "Paused"),
+    ]
+}
+
+

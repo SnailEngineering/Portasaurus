@@ -9,7 +9,23 @@ struct ContainerDetailView: View {
     let container: DockerContainer
     let endpointId: Int
 
-    @State private var viewModel = ContainerDetailViewModel()
+    @State private var viewModel: ContainerDetailViewModel
+    @State private var isPreview = false
+
+    init(client: PortainerClient, container: DockerContainer, endpointId: Int) {
+        self.client = client
+        self.container = container
+        self.endpointId = endpointId
+        self._viewModel = State(initialValue: ContainerDetailViewModel())
+    }
+
+    init(client: PortainerClient, container: DockerContainer, endpointId: Int, previewViewModel: ContainerDetailViewModel) {
+        self.client = client
+        self.container = container
+        self.endpointId = endpointId
+        self._viewModel = State(initialValue: previewViewModel)
+        self._isPreview = State(initialValue: true)
+    }
 
     var body: some View {
         Group {
@@ -28,7 +44,10 @@ struct ContainerDetailView: View {
 #endif
         .toolbar { toolbarContent }
         .refreshable { await viewModel.load(client: client, containerId: container.id, endpointId: endpointId) }
-        .task { await viewModel.load(client: client, containerId: container.id, endpointId: endpointId) }
+        .task {
+            guard !isPreview else { return }
+            await viewModel.load(client: client, containerId: container.id, endpointId: endpointId)
+        }
         .alert("Action Failed", isPresented: $viewModel.actionError.isPresented) {
             Button("OK", role: .cancel) { viewModel.actionError = nil }
         } message: {
@@ -57,7 +76,7 @@ struct ContainerDetailView: View {
             }
             resourcesSection(detail.hostConfig)
         }
-        .listStyle(.insetGrouped)
+        .listStyle(.inset)
     }
 
     // MARK: - Status Section
@@ -113,18 +132,24 @@ struct ContainerDetailView: View {
             ForEach(env, id: \.self) { entry in
                 let parts = entry.split(separator: "=", maxSplits: 1).map(String.init)
                 if parts.count == 2 {
-                    LabeledContent(parts[0]) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(parts[0])
+                            .font(.caption.monospaced().weight(.semibold))
+                            .foregroundStyle(.primary)
                         Text(parts[1])
+                            .font(.caption.monospaced())
                             .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.trailing)
                             .textSelection(.enabled)
+                            .lineLimit(3)
+                            .truncationMode(.tail)
                     }
-                    .font(.callout.monospaced())
+                    .padding(.vertical, 2)
                 } else {
                     Text(entry)
-                        .font(.callout.monospaced())
+                        .font(.caption.monospaced())
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
+                        .lineLimit(2)
                 }
             }
         }
@@ -160,7 +185,7 @@ struct ContainerDetailView: View {
 
     private func mountsSection(_ mounts: [DockerContainerDetail.Mount]) -> some View {
         Section("Mounts") {
-            ForEach(mounts, id: \.destination) { mount in
+            ForEach(Array(mounts.enumerated()), id: \.offset) { _, mount in
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(mount.destination)
@@ -173,7 +198,7 @@ struct ContainerDetailView: View {
                             .background(.tertiary, in: Capsule())
                         Text(mount.rw ? "rw" : "ro")
                             .font(.caption2.weight(.semibold))
-                            .foregroundStyle(mount.rw ? .primary : .orange)
+                            .foregroundStyle(mount.rw ? AnyShapeStyle(.primary) : AnyShapeStyle(.orange))
                     }
                     if !mount.source.isEmpty {
                         Text(mount.source)
@@ -343,4 +368,129 @@ private extension Optional where Wrapped == String {
         get { self != nil }
         set { if !newValue { self = nil } }
     }
+}
+
+// MARK: - Previews
+
+#Preview("Running Container") {
+    NavigationStack {
+        ContainerDetailView(
+            client: PortainerClient(serverURL: URL(string: "http://localhost:9000")!),
+            container: .previewMock,
+            endpointId: 1,
+            previewViewModel: ContainerDetailViewModel(previewDetail: .previewRunning)
+        )
+    }
+}
+
+#Preview("Exited Container") {
+    NavigationStack {
+        ContainerDetailView(
+            client: PortainerClient(serverURL: URL(string: "http://localhost:9000")!),
+            container: .previewMockExited,
+            endpointId: 1,
+            previewViewModel: ContainerDetailViewModel(previewDetail: .previewExited)
+        )
+    }
+}
+
+// MARK: - Preview Mock Data
+
+private extension DockerContainer {
+    static let previewMock: DockerContainer = {
+        let json = """
+        {"Id":"a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4","Names":["/nginx-proxy"],"Image":"nginx:alpine",
+         "ImageID":"sha256:abc","Command":"nginx -g 'daemon off;'","Created":1700000000,
+         "State":"running","Status":"Up 3 days","Ports":[],"Labels":{}}
+        """
+        return try! JSONDecoder().decode(DockerContainer.self, from: Data(json.utf8))
+    }()
+
+    static let previewMockExited: DockerContainer = {
+        let json = """
+        {"Id":"b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5","Names":["/api-server"],"Image":"myapp/api:v2.1.0",
+         "ImageID":"sha256:def","Command":"/entrypoint.sh","Created":1700000000,
+         "State":"exited","Status":"Exited (0) 2 hours ago","Ports":[],"Labels":{}}
+        """
+        return try! JSONDecoder().decode(DockerContainer.self, from: Data(json.utf8))
+    }()
+}
+
+private extension DockerContainerDetail {
+    static let previewRunning: DockerContainerDetail = {
+        let json = """
+        {
+          "Id": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+          "Name": "/nginx-proxy",
+          "Created": "2024-01-15T10:30:00Z",
+          "State": {
+            "Status": "running", "Running": true, "Paused": false, "Restarting": false,
+            "OOMKilled": false, "Dead": false, "Pid": 1234, "ExitCode": 0, "Error": "",
+            "StartedAt": "2024-01-15T10:30:00Z", "FinishedAt": "0001-01-01T00:00:00Z"
+          },
+          "Config": {
+            "Image": "nginx:alpine",
+            "Cmd": ["nginx", "-g", "daemon off;"],
+            "Entrypoint": null,
+            "WorkingDir": "",
+            "User": "",
+            "Env": ["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "NGINX_VERSION=1.25.3"],
+            "Labels": {"maintainer": "NGINX Docker Maintainers", "com.example.version": "1.0"}
+          },
+          "HostConfig": {
+            "Memory": 268435456,
+            "NanoCpus": 500000000,
+            "RestartPolicy": {"Name": "unless-stopped", "MaximumRetryCount": 0}
+          },
+          "Mounts": [
+            {"Type": "bind", "Source": "/etc/nginx/conf.d", "Destination": "/etc/nginx/conf.d", "Mode": "ro", "RW": false},
+            {"Type": "volume", "Source": "nginx-logs", "Destination": "/var/log/nginx", "Mode": "", "RW": true}
+          ],
+          "NetworkSettings": {
+            "Ports": {"80/tcp": [{"HostIp": "0.0.0.0", "HostPort": "8080"}], "443/tcp": [{"HostIp": "0.0.0.0", "HostPort": "8443"}]},
+            "Networks": {
+              "bridge": {"IPAddress": "172.17.0.2", "Gateway": "172.17.0.1", "MacAddress": "02:42:ac:11:00:02"}
+            }
+          }
+        }
+        """
+        return try! JSONDecoder().decode(DockerContainerDetail.self, from: Data(json.utf8))
+    }()
+
+    static let previewExited: DockerContainerDetail = {
+        let json = """
+        {
+          "Id": "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5",
+          "Name": "/api-server",
+          "Created": "2024-01-10T08:00:00Z",
+          "State": {
+            "Status": "exited", "Running": false, "Paused": false, "Restarting": false,
+            "OOMKilled": false, "Dead": false, "Pid": 0, "ExitCode": 0, "Error": "",
+            "StartedAt": "2024-01-15T08:00:00Z", "FinishedAt": "2024-01-15T09:45:00Z"
+          },
+          "Config": {
+            "Image": "myapp/api:v2.1.0",
+            "Cmd": ["/entrypoint.sh"],
+            "Entrypoint": null,
+            "WorkingDir": "/app",
+            "User": "node",
+            "Env": ["NODE_ENV=production", "PORT=3000", "DATABASE_URL=postgres://db:5432/myapp"],
+            "Labels": {}
+          },
+          "HostConfig": {
+            "Memory": 536870912,
+            "NanoCpus": 1000000000,
+            "RestartPolicy": {"Name": "on-failure", "MaximumRetryCount": 3}
+          },
+          "Mounts": [],
+          "NetworkSettings": {
+            "Ports": {"3000/tcp": [{"HostIp": "127.0.0.1", "HostPort": "3000"}]},
+            "Networks": {
+              "app-network": {"IPAddress": "10.0.0.5", "Gateway": "10.0.0.1", "MacAddress": "02:42:0a:00:00:05"}
+            }
+          }
+        }
+        """
+        return try! JSONDecoder().decode(DockerContainerDetail.self, from: Data(json.utf8))
+    }()
 }

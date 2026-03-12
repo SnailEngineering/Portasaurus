@@ -10,7 +10,21 @@ struct EnvironmentListView: View {
     let client: PortainerClient
     let serverName: String
 
-    @State private var viewModel = EnvironmentListViewModel()
+    @State private var viewModel: EnvironmentListViewModel
+    @State private var isPreview = false
+
+    init(client: PortainerClient, serverName: String) {
+        self.client = client
+        self.serverName = serverName
+        self._viewModel = State(initialValue: EnvironmentListViewModel())
+    }
+
+    init(client: PortainerClient, serverName: String, previewViewModel: EnvironmentListViewModel) {
+        self.client = client
+        self.serverName = serverName
+        self._viewModel = State(initialValue: previewViewModel)
+        self._isPreview = State(initialValue: true)
+    }
 
     var body: some View {
         NavigationStack {
@@ -32,7 +46,10 @@ struct EnvironmentListView: View {
 #endif
             .searchable(text: $viewModel.searchText, prompt: "Search environments")
             .refreshable { await viewModel.load(from: client) }
-            .task { await viewModel.load(from: client) }
+            .task {
+                guard !isPreview else { return }
+                await viewModel.load(from: client)
+            }
         }
     }
 
@@ -56,22 +73,28 @@ struct EnvironmentListView: View {
 
     @ViewBuilder
     private func environmentRow(_ env: PortainerEndpoint) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Label(env.name, systemImage: env.type.systemImage)
-                    .font(.body)
-                Spacer()
-                StatusBadge(status: env.status)
-            }
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: env.type.systemImage)
+                .font(.title3)
+                .foregroundStyle(.tint)
+                .frame(width: 28)
 
-            HStack(spacing: 12) {
-                Label(env.type.displayName, systemImage: "tag")
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack {
+                    Text(env.name)
+                        .font(.body)
+                    Spacer()
+                    StatusBadge(status: env.status)
+                }
 
-                if let snap = env.snapshot {
-                    Divider().frame(height: 12)
-                    snapshotSummary(snap)
+                HStack(spacing: 8) {
+                    Text(env.type.displayName)
+                        .foregroundStyle(.secondary)
+                        .font(.caption)
+
+                    if let snap = env.snapshot {
+                        snapshotSummary(snap)
+                    }
                 }
             }
         }
@@ -80,17 +103,26 @@ struct EnvironmentListView: View {
 
     @ViewBuilder
     private func snapshotSummary(_ snap: PortainerEndpoint.DockerSnapshot) -> some View {
-        HStack(spacing: 8) {
-            Label("\(snap.runningContainerCount)", systemImage: "play.fill")
-                .foregroundStyle(.green)
-            Label("\(snap.stoppedContainerCount)", systemImage: "stop.fill")
-                .foregroundStyle(.secondary)
+        HStack(spacing: 6) {
+            Text("·")
+                .foregroundStyle(.tertiary)
+            HStack(spacing: 3) {
+                Image(systemName: "play.fill").foregroundStyle(.green)
+                Text("\(snap.runningContainerCount)").foregroundStyle(.primary)
+            }
+            HStack(spacing: 3) {
+                Image(systemName: "stop.fill").foregroundStyle(.secondary)
+                Text("\(snap.stoppedContainerCount)").foregroundStyle(.secondary)
+            }
             if snap.unhealthyContainerCount > 0 {
-                Label("\(snap.unhealthyContainerCount)", systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
+                HStack(spacing: 3) {
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                    Text("\(snap.unhealthyContainerCount)").foregroundStyle(.orange)
+                }
             }
         }
         .font(.caption)
+        .lineLimit(1)
     }
 
     // MARK: - Error
@@ -113,7 +145,8 @@ struct EnvironmentListView: View {
 #Preview("Environment List") {
     EnvironmentListView(
         client: PortainerClient(serverURL: URL(string: "http://localhost:9000")!),
-        serverName: "My Portainer"
+        serverName: "My Portainer",
+        previewViewModel: EnvironmentListViewModel(previewEnvironments: PortainerEndpoint.mockEnvironments)
     )
 }
 
@@ -123,5 +156,38 @@ struct EnvironmentListView: View {
     } description: {
         Text("Select a server from the list to connect.")
     }
+}
+
+// MARK: - Preview Mock Data
+
+private extension PortainerEndpoint {
+    static let mockEnvironments: [PortainerEndpoint] = {
+        let items: [(id: Int, name: String, type: Int, status: Int, running: Int, stopped: Int, unhealthy: Int)] = [
+            (1, "production",  1, 1, 12, 2, 1),
+            (2, "staging",     1, 1,  5, 3, 0),
+            (3, "dev-cluster", 2, 1,  8, 1, 0),
+            (4, "edge-node-1", 4, 2,  0, 0, 0),
+        ]
+        return items.map { item in
+            let json = """
+            {
+              "Id": \(item.id),
+              "Name": "\(item.name)",
+              "Type": \(item.type),
+              "Status": \(item.status),
+              "URL": "tcp://localhost:2375",
+              "PublicURL": "",
+              "Snapshots": [{
+                "RunningContainerCount": \(item.running),
+                "StoppedContainerCount": \(item.stopped),
+                "HealthyContainerCount": \(item.running),
+                "UnhealthyContainerCount": \(item.unhealthy),
+                "DockerVersion": "24.0.7"
+              }]
+            }
+            """
+            return try! JSONDecoder().decode(PortainerEndpoint.self, from: Data(json.utf8))
+        }
+    }()
 }
 

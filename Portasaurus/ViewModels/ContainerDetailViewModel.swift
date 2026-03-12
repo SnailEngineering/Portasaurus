@@ -12,6 +12,15 @@ final class ContainerDetailViewModel {
     var loadError: String?
     var actionError: String?
 
+    // MARK: - Init
+
+    init() {}
+
+    /// Preview-only initializer with pre-loaded detail data.
+    init(previewDetail: DockerContainerDetail) {
+        detail = previewDetail
+    }
+
     // MARK: - Loading
 
     func load(client: PortainerClient, containerId: String, endpointId: Int) async {
