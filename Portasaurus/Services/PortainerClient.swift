@@ -132,6 +132,43 @@ final class PortainerClient: Sendable {
         try await request(path: "/api/endpoints")
     }
 
+    // MARK: - Containers
+
+    /// Base Docker proxy path for a given endpoint.
+    private func dockerBase(endpointId: Int) -> String {
+        "/api/endpoints/\(endpointId)/docker"
+    }
+
+    /// Lists all containers (running + stopped) for an environment.
+    func containers(endpointId: Int) async throws -> [DockerContainer] {
+        try await request(path: "\(dockerBase(endpointId: endpointId))/containers/json?all=true")
+    }
+
+    /// Returns full inspection data for a single container.
+    func containerDetail(id: String, endpointId: Int) async throws -> DockerContainerDetail {
+        try await request(path: "\(dockerBase(endpointId: endpointId))/containers/\(id)/json")
+    }
+
+    func startContainer(id: String, endpointId: Int) async throws {
+        try await requestVoid(method: .post, path: "\(dockerBase(endpointId: endpointId))/containers/\(id)/start")
+    }
+
+    func stopContainer(id: String, endpointId: Int) async throws {
+        try await requestVoid(method: .post, path: "\(dockerBase(endpointId: endpointId))/containers/\(id)/stop")
+    }
+
+    func restartContainer(id: String, endpointId: Int) async throws {
+        try await requestVoid(method: .post, path: "\(dockerBase(endpointId: endpointId))/containers/\(id)/restart")
+    }
+
+    func killContainer(id: String, endpointId: Int) async throws {
+        try await requestVoid(method: .post, path: "\(dockerBase(endpointId: endpointId))/containers/\(id)/kill")
+    }
+
+    func removeContainer(id: String, endpointId: Int) async throws {
+        try await requestVoid(method: .delete, path: "\(dockerBase(endpointId: endpointId))/containers/\(id)?force=true&v=true")
+    }
+
     // MARK: - Generic Request
 
     /// Performs an API request and decodes the JSON response.
