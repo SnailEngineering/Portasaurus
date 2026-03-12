@@ -208,33 +208,32 @@ Each phase is designed to be self-contained. Complete one before starting the ne
 
 The landing experience. Users can add, save, and connect to Portainer servers.
 
-- [ ] **1.1** Set up multi-platform target configuration (iOS, macOS, visionOS) in Xcode project
-- [ ] **1.2** Create `PortainerClient` — core networking layer
+- [x] **1.1** Set up multi-platform target configuration (iOS, macOS, visionOS) in Xcode project
+- [x] **1.2** Create `PortainerClient` — core networking layer
   - `URLSession`-based with async/await
   - Base URL construction from server host/port/scheme
-  - `SSLTrustHandler` — custom `URLSessionDelegate` to handle self-signed certificates (with user opt-in)
   - Generic `request<T: Decodable>()` method with JSON encoding/decoding
   - Automatic `Authorization: Bearer` header injection
   - 401 response interception for re-authentication flow
-- [ ] **1.3** Create `KeychainService` — credential storage
+- [x] **1.3** Create `KeychainService` — credential storage
   - Save credentials keyed by server URL
   - Read credentials for a given server
   - Delete credentials
   - Uses Security framework directly (no third-party dependencies)
-- [ ] **1.4** Create `SavedServer` SwiftData model
+- [x] **1.4** Create `SavedServer` SwiftData model
   - Properties: `id` (UUID), `name` (display label), `host`, `port`, `usesHTTPS`, `username`, `dateAdded`, `lastConnected`
   - Credentials stored in Keychain (not in SwiftData)
-- [ ] **1.5** Implement authentication — `POST /api/auth`
+- [x] **1.5** Implement authentication — `POST /api/auth`
   - `AuthRequest` / `AuthResponse` Codable types
   - Token stored in memory on `PortainerClient` (not persisted — re-auth on app launch)
   - Validate connection with `GET /api/system/status` after login
-- [ ] **1.6** Build `ServerListView` — landing page
+- [x] **1.6** Build `ServerListView` — landing page
   - List of saved servers (from SwiftData) showing name, host, last connected date
   - "Add Server" button
   - Swipe-to-delete to remove saved servers (with Keychain cleanup)
   - Tap to connect → authenticate → navigate into the app
   - Connection status indicator (connecting, failed, success)
-- [ ] **1.7** Build `AddServerView` — new server form
+- [x] **1.7** Build `AddServerView` — new server form
   - Fields: display name, host/IP, port (default 9443), HTTPS toggle, username, password
   - "Test Connection" button — attempts `POST /api/auth` + `GET /api/system/status`
   - "Save & Connect" — saves to SwiftData + Keychain, then navigates in

@@ -33,6 +33,16 @@ xcodebuild -project Portasaurus/Portasaurus.xcodeproj -scheme Portasaurus -desti
 - **View architecture**: Views are thin; `@Observable` ViewModels hold all API/state logic
 - **API models**: Codable structs matching Portainer/Docker API responses directly
 
+## File Organization
+
+- **One public type per file** — each public/internal struct, class, enum, or protocol goes in its own `.swift` file
+- **Private helpers stay with their owner** — small private types used only by a single class (e.g. lock wrappers, weak reference wrappers) remain in that class's file
+- **Directory structure by role**:
+  - `Models/` — data types: Codable API models, error types, enums
+  - `Services/` — networking, persistence, and other service layers
+  - `Views/` — SwiftUI views
+  - `ViewModels/` — `@Observable` view models
+
 ## Key Constraints
 
 - **No third-party dependencies** — Apple frameworks only (URLSession, Security, SwiftData, SwiftUI)
