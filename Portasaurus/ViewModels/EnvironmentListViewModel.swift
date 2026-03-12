@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 @Observable
 final class EnvironmentListViewModel {
@@ -22,12 +23,15 @@ final class EnvironmentListViewModel {
     // MARK: - Actions
 
     func load(from client: PortainerClient) async {
+        AppLogger.viewModel.info("Loading environments")
         isLoading = true
         loadError = nil
         defer { isLoading = false }
         do {
             environments = try await client.endpoints()
+            AppLogger.viewModel.info("Loaded \(self.environments.count) environment(s)")
         } catch {
+            AppLogger.viewModel.error("Failed to load environments: \(error.localizedDescription, privacy: .public)")
             loadError = error.localizedDescription
         }
     }

@@ -4,38 +4,55 @@ import Testing
 
 struct AddServerViewModelValidationTests {
 
-    // MARK: portValue
+    // MARK: parsedURL
 
-    @Test func portValueValidForInRange() {
+    @Test func parsedURLValidHTTPS() {
         let vm = AddServerViewModel()
-        vm.port = "9443"
-        #expect(vm.portValue == 9443)
+        vm.serverURL = "https://portainer.example.com"
+        #expect(vm.parsedURL != nil)
+        #expect(vm.parsedURL?.scheme == "https")
+        #expect(vm.parsedURL?.host == "portainer.example.com")
     }
 
-    @Test func portValueNilForZero() {
+    @Test func parsedURLValidHTTP() {
         let vm = AddServerViewModel()
-        vm.port = "0"
-        #expect(vm.portValue == nil)
+        vm.serverURL = "http://192.168.1.1:9000"
+        #expect(vm.parsedURL != nil)
+        #expect(vm.parsedURL?.scheme == "http")
+        #expect(vm.parsedURL?.port == 9000)
     }
 
-    @Test func portValueNilForAboveMax() {
+    @Test func parsedURLValidWithCustomPort() {
         let vm = AddServerViewModel()
-        vm.port = "65536"
-        #expect(vm.portValue == nil)
+        vm.serverURL = "https://192.168.1.1:9443"
+        #expect(vm.parsedURL != nil)
+        #expect(vm.parsedURL?.port == 9443)
     }
 
-    @Test func portValueNilForNonNumeric() {
+    @Test func parsedURLPrependsHTTPSWhenNoScheme() {
         let vm = AddServerViewModel()
-        vm.port = "abc"
-        #expect(vm.portValue == nil)
+        vm.serverURL = "portainer.example.com"
+        #expect(vm.parsedURL != nil)
+        #expect(vm.parsedURL?.scheme == "https")
+        #expect(vm.parsedURL?.host == "portainer.example.com")
     }
 
-    @Test func portValueAcceptsBoundaries() {
+    @Test func parsedURLNilForEmptyString() {
         let vm = AddServerViewModel()
-        vm.port = "1"
-        #expect(vm.portValue == 1)
-        vm.port = "65535"
-        #expect(vm.portValue == 65535)
+        vm.serverURL = ""
+        #expect(vm.parsedURL == nil)
+    }
+
+    @Test func parsedURLNilForInvalidScheme() {
+        let vm = AddServerViewModel()
+        vm.serverURL = "ftp://portainer.example.com"
+        #expect(vm.parsedURL == nil)
+    }
+
+    @Test func parsedURLNilForWhitespaceOnly() {
+        let vm = AddServerViewModel()
+        vm.serverURL = "   "
+        #expect(vm.parsedURL == nil)
     }
 
     // MARK: isValid
@@ -43,8 +60,7 @@ struct AddServerViewModelValidationTests {
     @Test func isValidRequiresAllFields() {
         let vm = AddServerViewModel()
         vm.name = "Home"
-        vm.host = "192.168.1.1"
-        vm.port = "9443"
+        vm.serverURL = "https://portainer.example.com"
         vm.username = "admin"
         vm.password = "pass"
         #expect(vm.isValid)
@@ -53,28 +69,16 @@ struct AddServerViewModelValidationTests {
     @Test func isValidFalseWhenNameBlank() {
         let vm = AddServerViewModel()
         vm.name = "   "
-        vm.host = "192.168.1.1"
-        vm.port = "9443"
+        vm.serverURL = "https://portainer.example.com"
         vm.username = "admin"
         vm.password = "pass"
         #expect(!vm.isValid)
     }
 
-    @Test func isValidFalseWhenHostBlank() {
+    @Test func isValidFalseWhenURLInvalid() {
         let vm = AddServerViewModel()
         vm.name = "Home"
-        vm.host = ""
-        vm.port = "9443"
-        vm.username = "admin"
-        vm.password = "pass"
-        #expect(!vm.isValid)
-    }
-
-    @Test func isValidFalseWhenPortInvalid() {
-        let vm = AddServerViewModel()
-        vm.name = "Home"
-        vm.host = "192.168.1.1"
-        vm.port = "0"
+        vm.serverURL = ""
         vm.username = "admin"
         vm.password = "pass"
         #expect(!vm.isValid)
@@ -83,8 +87,7 @@ struct AddServerViewModelValidationTests {
     @Test func isValidFalseWhenPasswordBlank() {
         let vm = AddServerViewModel()
         vm.name = "Home"
-        vm.host = "192.168.1.1"
-        vm.port = "9443"
+        vm.serverURL = "https://portainer.example.com"
         vm.username = "admin"
         vm.password = ""
         #expect(!vm.isValid)
@@ -94,29 +97,26 @@ struct AddServerViewModelValidationTests {
 
     @Test func validationMessageNameFirst() {
         let vm = AddServerViewModel()
-        // All blank — name is checked first.
         #expect(vm.validationMessage?.contains("name") == true)
     }
 
-    @Test func validationMessageHostAfterName() {
+    @Test func validationMessageURLAfterName() {
         let vm = AddServerViewModel()
         vm.name = "Home"
-        #expect(vm.validationMessage?.contains("Host") == true)
+        #expect(vm.validationMessage?.contains("URL") == true)
     }
 
-    @Test func validationMessagePortAfterHost() {
+    @Test func validationMessageUsernameAfterURL() {
         let vm = AddServerViewModel()
         vm.name = "Home"
-        vm.host = "192.168.1.1"
-        vm.port = "bad"
-        #expect(vm.validationMessage?.contains("Port") == true)
+        vm.serverURL = "https://portainer.example.com"
+        #expect(vm.validationMessage?.contains("Username") == true)
     }
 
     @Test func validationMessageNilWhenValid() {
         let vm = AddServerViewModel()
         vm.name = "Home"
-        vm.host = "192.168.1.1"
-        vm.port = "9443"
+        vm.serverURL = "https://portainer.example.com"
         vm.username = "admin"
         vm.password = "pass"
         #expect(vm.validationMessage == nil)

@@ -15,9 +15,7 @@ final class SavedServer {
 
     var id: UUID
     var name: String
-    var host: String
-    var port: Int
-    var usesHTTPS: Bool
+    var serverURL: String
     var username: String
     var trustSelfSignedCertificates: Bool
     var dateAdded: Date
@@ -27,27 +25,16 @@ final class SavedServer {
 
     init(
         name: String,
-        host: String,
-        port: Int,
-        usesHTTPS: Bool,
+        serverURL: String,
         username: String,
         trustSelfSignedCertificates: Bool = false
     ) {
         self.id = UUID()
         self.name = name
-        self.host = host
-        self.port = port
-        self.usesHTTPS = usesHTTPS
+        self.serverURL = serverURL
         self.username = username
         self.trustSelfSignedCertificates = trustSelfSignedCertificates
         self.dateAdded = Date()
         self.lastConnected = nil
-    }
-
-    // MARK: - Computed
-
-    /// The full server URL string used as the Keychain key.
-    var serverURL: String {
-        "\(usesHTTPS ? "https" : "http")://\(host):\(port)"
     }
 }

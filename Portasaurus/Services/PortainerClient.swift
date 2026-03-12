@@ -1,4 +1,6 @@
 import Foundation
+import OSLog
+
 // MARK: - Re-authentication
 
 /// Provides credentials for re-authentication when a 401 is received.
@@ -48,7 +50,12 @@ final class PortainerClient: Sendable {
     init(serverURL: URL, trustSelfSigned: Bool = false) {
         self.baseURL = serverURL
 
-        let config = URLSessionConfiguration.default
+        // Use ephemeral configuration so URLSession never persists cookies.
+        // Portainer sets a `portainer_api_key` cookie on successful auth; if that
+        // cookie is stored and replayed, Portainer's CSRF middleware activates and
+        // rejects subsequent requests with 403. The app uses JWT bearer tokens
+        // exclusively, so cookies serve no purpose here.
+        let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 30
         config.timeoutIntervalForResource = 300
 
@@ -91,16 +98,23 @@ final class PortainerClient: Sendable {
             let password: String
         }
 
-        let response: AuthResponse = try await request(
-            method: .post,
-            path: "/api/auth",
-            body: AuthRequest(username: username, password: password),
-            authenticated: false,
-            allowRetry: false
-        )
+        AppLogger.auth.info("Authenticating user '\(username, privacy: .public)' at \(self.baseURL, privacy: .public)")
 
-        token = response.jwt
-        return response.jwt
+        do {
+            let response: AuthResponse = try await request(
+                method: .post,
+                path: "/api/auth",
+                body: AuthRequest(username: username, password: password),
+                authenticated: false,
+                allowRetry: false
+            )
+            token = response.jwt
+            AppLogger.auth.info("Authentication succeeded for '\(username, privacy: .public)'")
+            return response.jwt
+        } catch {
+            AppLogger.auth.error("Authentication failed for '\(username, privacy: .public)': \(error.localizedDescription, privacy: .public)")
+            throw error
+        }
     }
 
     // MARK: - System
@@ -136,12 +150,16 @@ final class PortainerClient: Sendable {
         allowRetry: Bool = true
     ) async throws -> T {
         guard let url = URL(string: path, relativeTo: baseURL) else {
+            AppLogger.network.error("Invalid URL for path '\(path, privacy: .public)'")
             throw PortainerClientError.invalidURL
         }
 
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = method.rawValue
         urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+        // Some Portainer deployments (behind a reverse proxy with CSRF checks) reject
+        // requests that lack a Referer header. Supply the server's base URL.
+        urlRequest.setValue(baseURL.absoluteString, forHTTPHeaderField: "Referer")
 
         // Attach Bearer token
         if authenticated, let token {
@@ -154,18 +172,26 @@ final class PortainerClient: Sendable {
             urlRequest.httpBody = try JSONEncoder().encode(body)
         }
 
+        AppLogger.network.debug("\(method.rawValue, privacy: .public) \(url, privacy: .public)")
+        #if DEBUG
+        AppLogger.network.debug("\(urlRequest.curlDescription, privacy: .public)")
+        #endif
+
         let (data, response) = try await session.data(for: urlRequest)
 
         guard let httpResponse = response as? HTTPURLResponse else {
+            AppLogger.network.error("\(method.rawValue, privacy: .public) \(url, privacy: .public) → non-HTTP response")
             throw PortainerClientError.httpError(statusCode: -1)
         }
 
         let statusCode = httpResponse.statusCode
+        AppLogger.network.info("\(method.rawValue, privacy: .public) \(url, privacy: .public) → \(statusCode, privacy: .public)")
 
         // 401 — attempt re-authentication once
         if statusCode == 401, authenticated, allowRetry,
            let delegate = authDelegate,
            let credentials = await delegate.portainerClientNeedsReauthentication(self) {
+            AppLogger.auth.info("Received 401 on \(path, privacy: .public) — retrying after re-authentication")
             try await authenticate(username: credentials.username, password: credentials.password)
             return try await request(
                 method: method,
@@ -177,6 +203,7 @@ final class PortainerClient: Sendable {
         }
 
         if statusCode == 401 {
+            AppLogger.auth.warning("Unauthorized (401) on \(path, privacy: .public) — clearing token")
             token = nil
             throw PortainerClientError.unauthorized
         }
@@ -184,8 +211,11 @@ final class PortainerClient: Sendable {
         // Other error responses
         if statusCode >= 400 {
             if let apiError = try? JSONDecoder().decode(PortainerAPIError.self, from: data) {
+                AppLogger.network.error("API error \(statusCode, privacy: .public) on \(path, privacy: .public): \(apiError.message, privacy: .public)")
                 throw PortainerClientError.apiError(statusCode: statusCode, apiError: apiError)
             }
+            let body = String(data: data, encoding: .utf8) ?? "<binary>"
+            AppLogger.network.error("HTTP \(statusCode, privacy: .public) on \(path, privacy: .public): \(body, privacy: .public)")
             throw PortainerClientError.httpError(statusCode: statusCode)
         }
 
@@ -193,6 +223,7 @@ final class PortainerClient: Sendable {
         do {
             return try JSONDecoder().decode(T.self, from: data)
         } catch let error as DecodingError {
+            AppLogger.network.error("Decoding failed for \(path, privacy: .public): \(error.localizedDescription, privacy: .public)")
             throw PortainerClientError.decodingError(error)
         }
     }
@@ -206,12 +237,14 @@ final class PortainerClient: Sendable {
         allowRetry: Bool = true
     ) async throws {
         guard let url = URL(string: path, relativeTo: baseURL) else {
+            AppLogger.network.error("Invalid URL for path '\(path, privacy: .public)'")
             throw PortainerClientError.invalidURL
         }
 
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = method.rawValue
         urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+        urlRequest.setValue(baseURL.absoluteString, forHTTPHeaderField: "Referer")
 
         if authenticated, let token {
             urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -222,32 +255,44 @@ final class PortainerClient: Sendable {
             urlRequest.httpBody = try JSONEncoder().encode(body)
         }
 
+        AppLogger.network.debug("\(method.rawValue, privacy: .public) \(url, privacy: .public)")
+        #if DEBUG
+        AppLogger.network.debug("\(urlRequest.curlDescription, privacy: .public)")
+        #endif
+
         let (data, response) = try await session.data(for: urlRequest)
 
         guard let httpResponse = response as? HTTPURLResponse else {
+            AppLogger.network.error("\(method.rawValue, privacy: .public) \(url, privacy: .public) → non-HTTP response")
             throw PortainerClientError.httpError(statusCode: -1)
         }
 
         let statusCode = httpResponse.statusCode
+        AppLogger.network.info("\(method.rawValue, privacy: .public) \(url, privacy: .public) → \(statusCode, privacy: .public)")
 
         // 401 — attempt re-authentication once
         if statusCode == 401, authenticated, allowRetry,
            let delegate = authDelegate,
            let credentials = await delegate.portainerClientNeedsReauthentication(self) {
+            AppLogger.auth.info("Received 401 on \(path, privacy: .public) — retrying after re-authentication")
             try await authenticate(username: credentials.username, password: credentials.password)
             try await requestVoid(method: method, path: path, body: body, authenticated: true, allowRetry: false)
             return
         }
 
         if statusCode == 401 {
+            AppLogger.auth.warning("Unauthorized (401) on \(path, privacy: .public) — clearing token")
             token = nil
             throw PortainerClientError.unauthorized
         }
 
         if statusCode >= 400 {
             if let apiError = try? JSONDecoder().decode(PortainerAPIError.self, from: data) {
+                AppLogger.network.error("API error \(statusCode, privacy: .public) on \(path, privacy: .public): \(apiError.message, privacy: .public)")
                 throw PortainerClientError.apiError(statusCode: statusCode, apiError: apiError)
             }
+            let body = String(data: data, encoding: .utf8) ?? "<binary>"
+            AppLogger.network.error("HTTP \(statusCode, privacy: .public) on \(path, privacy: .public): \(body, privacy: .public)")
             throw PortainerClientError.httpError(statusCode: statusCode)
         }
     }
@@ -275,5 +320,37 @@ private struct WeakDelegate: Sendable {
         self.delegate = delegate
     }
 }
+
+#if DEBUG
+// MARK: - cURL debug helper
+
+private extension URLRequest {
+    /// Returns a cURL command string reproducing this request.
+    ///
+    /// Logged at `.debug` level in debug builds so requests can be replayed
+    /// directly in a terminal for troubleshooting.
+    var curlDescription: String {
+        guard let url else { return "curl <missing URL>" }
+
+        var parts = ["curl -v"]
+        parts.append("-X \(httpMethod ?? "GET")")
+
+        for (field, value) in (allHTTPHeaderFields ?? [:]).sorted(by: { $0.key < $1.key }) {
+            // Redact the Bearer token so the log is safe to share.
+            let safeValue = field.lowercased() == "authorization" ? "<redacted>" : value
+            parts.append("-H \"\(field): \(safeValue)\"")
+        }
+
+        if let body = httpBody, let bodyString = String(data: body, encoding: .utf8) {
+            // Escape single quotes inside the body so the shell command stays valid.
+            let escaped = bodyString.replacingOccurrences(of: "'", with: "'\\''")
+            parts.append("--data '\(escaped)'")
+        }
+
+        parts.append("\"\(url.absoluteString)\"")
+        return parts.joined(separator: " \\\n  ")
+    }
+}
+#endif
 
 

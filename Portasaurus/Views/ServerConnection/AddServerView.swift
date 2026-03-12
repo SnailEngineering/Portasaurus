@@ -27,6 +27,7 @@ struct AddServerView: View {
                     }
                 }
             }
+            .formStyle(.grouped)
             .navigationTitle("Add Server")
 #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -54,53 +55,31 @@ struct AddServerView: View {
     // MARK: - Form Sections
 
     private var serverSection: some View {
-        Section("Server") {
-            LabeledContent("Name") {
-                TextField("My Portainer", text: $viewModel.name)
-                    .multilineTextAlignment(.trailing)
-            }
-            LabeledContent("Host") {
-                TextField("192.168.1.100", text: $viewModel.host)
-                    .multilineTextAlignment(.trailing)
-                    .autocorrectionDisabled()
+        Section {
+            TextField("Name", text: $viewModel.name)
+            TextField("URL", text: $viewModel.serverURL)
+                .autocorrectionDisabled()
 #if os(iOS)
-                    .keyboardType(.URL)
-                    .textInputAutocapitalization(.never)
+                .keyboardType(.URL)
+                .textInputAutocapitalization(.never)
 #endif
+        } footer: {
+            if let url = viewModel.parsedURL {
+                Label(url.absoluteString, systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.secondary)
+                    .font(.footnote)
             }
-            LabeledContent("Port") {
-                TextField("9443", text: $viewModel.port)
-                    .multilineTextAlignment(.trailing)
-#if os(iOS)
-                    .keyboardType(.numberPad)
-#endif
-            }
-            Toggle("Use HTTPS", isOn: $viewModel.usesHTTPS)
-                .onChange(of: viewModel.usesHTTPS) {
-                    // Suggest the standard port when toggling scheme.
-                    if viewModel.port == "9000" && viewModel.usesHTTPS {
-                        viewModel.port = "9443"
-                    } else if viewModel.port == "9443" && !viewModel.usesHTTPS {
-                        viewModel.port = "9000"
-                    }
-                }
         }
     }
 
     private var credentialsSection: some View {
-        Section("Credentials") {
-            LabeledContent("Username") {
-                TextField("admin", text: $viewModel.username)
-                    .multilineTextAlignment(.trailing)
-                    .autocorrectionDisabled()
+        Section {
+            TextField("Username", text: $viewModel.username)
+                .autocorrectionDisabled()
 #if os(iOS)
-                    .textInputAutocapitalization(.never)
+                .textInputAutocapitalization(.never)
 #endif
-            }
-            LabeledContent("Password") {
-                SecureField("Required", text: $viewModel.password)
-                    .multilineTextAlignment(.trailing)
-            }
+            SecureField("Password", text: $viewModel.password)
         }
     }
 
@@ -155,13 +134,20 @@ struct AddServerView: View {
             let (client, serverID) = try await viewModel.saveAndConnect(modelContext: modelContext)
             onConnected(client, serverID, viewModel.name)
         } catch {
-            // Surface the error via testResult so it's visible in the form.
             viewModel.testResult = .failure(error.localizedDescription)
         }
     }
 }
 
-#Preview {
+#Preview("Light") {
     AddServerView { _, _, _ in }
         .modelContainer(for: SavedServer.self, inMemory: true)
+        .preferredColorScheme(.light)
 }
+
+#Preview("Dark") {
+    AddServerView { _, _, _ in }
+        .modelContainer(for: SavedServer.self, inMemory: true)
+        .preferredColorScheme(.dark)
+}
+

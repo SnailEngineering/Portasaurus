@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import Security
 
 /// Keychain-backed credential storage, keyed by server URL.
@@ -28,6 +29,7 @@ enum KeychainService {
     /// Saves `username` and `password` for `serverURL`, replacing any existing entry.
     static func save(username: String, password: String, serverURL: String) throws {
         guard let passwordData = password.data(using: .utf8) else {
+            AppLogger.keychain.error("Failed to encode password data for '\(serverURL, privacy: .public)'")
             throw KeychainError.dataConversionFailed
         }
 
@@ -45,7 +47,12 @@ enum KeychainService {
             kSecValueData as String:   passwordData,
         ]
         let status = SecItemAdd(addQuery as CFDictionary, nil)
-        guard status == errSecSuccess else { throw KeychainError.saveFailed(status) }
+        if status == errSecSuccess {
+            AppLogger.keychain.info("Saved credentials for '\(username, privacy: .public)' at '\(serverURL, privacy: .public)'")
+        } else {
+            AppLogger.keychain.error("Save failed for '\(serverURL, privacy: .public)' (OSStatus \(status, privacy: .public))")
+            throw KeychainError.saveFailed(status)
+        }
     }
 
     /// Reads credentials for `serverURL`. Returns `nil` when no entry exists.
@@ -66,8 +73,12 @@ enum KeychainService {
               let username = item[kSecAttrAccount as String] as? String,
               let passwordData = item[kSecValueData as String] as? Data,
               let password = String(data: passwordData, encoding: .utf8)
-        else { return nil }
+        else {
+            AppLogger.keychain.warning("No credentials found for '\(serverURL, privacy: .public)' (OSStatus \(status, privacy: .public))")
+            return nil
+        }
 
+        AppLogger.keychain.info("Loaded credentials for '\(username, privacy: .public)' at '\(serverURL, privacy: .public)'")
         return (username, password)
     }
 
@@ -78,7 +89,12 @@ enum KeychainService {
             kSecAttrServer as String: serverURL,
         ]
         let status = SecItemDelete(query as CFDictionary)
-        guard status == errSecSuccess || status == errSecItemNotFound else {
+        if status == errSecSuccess {
+            AppLogger.keychain.info("Deleted credentials for '\(serverURL, privacy: .public)'")
+        } else if status == errSecItemNotFound {
+            AppLogger.keychain.debug("No credentials to delete for '\(serverURL, privacy: .public)'")
+        } else {
+            AppLogger.keychain.error("Delete failed for '\(serverURL, privacy: .public)' (OSStatus \(status, privacy: .public))")
             throw KeychainError.deleteFailed(status)
         }
     }

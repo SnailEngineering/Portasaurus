@@ -20,11 +20,29 @@ struct ServerListView: View {
                     emptyState
                 } else {
                     ForEach(servers) { server in
-                        serverRow(for: server)
+                        ServerRowView(
+                            server: server,
+                            state: viewModel.connectionState(for: server),
+                            onTap: {
+                                viewModel.clearError(for: server)
+                                Task {
+                                    if let client = await viewModel.connect(to: server) {
+                                        activeClient = client
+                                        activeServerID = server.id
+                                        activeServerName = server.name
+                                    }
+                                }
+                            },
+                            onDelete: {
+                                if activeServerID == server.id { activeClient = nil; activeServerID = nil; activeServerName = "" }
+                                viewModel.delete(server, in: modelContext)
+                            }
+                        )
                     }
                     .onDelete(perform: deleteServers)
                 }
             }
+            .navigationSplitViewColumnWidth(min: 200, ideal: 220)
             .navigationTitle("Servers")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -56,84 +74,6 @@ struct ServerListView: View {
                     Text("Select a server from the list to connect.")
                 }
             }
-        }
-    }
-
-    // MARK: - Server Row
-
-    @ViewBuilder
-    private func serverRow(for server: SavedServer) -> some View {
-        let state = viewModel.connectionState(for: server)
-
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 12) {
-                stateIcon(for: state)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(server.name)
-                        .font(.body)
-
-                    Text(server.serverURL)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-
-                    if let lastConnected = server.lastConnected {
-                        Text("Last connected \(lastConnected.formatted(.relative(presentation: .named)))")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                if state == .connecting {
-                    ProgressView().controlSize(.small)
-                }
-            }
-
-            if case .failed(let message) = state {
-                Text(message)
-                    .font(.caption2)
-                    .foregroundStyle(.red)
-                    .padding(.leading, 36)
-            }
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            guard state != .connecting else { return }
-            viewModel.clearError(for: server)
-            Task {
-                if let client = await viewModel.connect(to: server) {
-                    activeClient = client
-                    activeServerID = server.id
-                    activeServerName = server.name
-                }
-            }
-        }
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button(role: .destructive) {
-                viewModel.delete(server, in: modelContext)
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func stateIcon(for state: ServerListViewModel.ConnectionState) -> some View {
-        switch state {
-        case .idle:
-            Image(systemName: "server.rack")
-                .foregroundStyle(.secondary)
-                .frame(width: 24)
-        case .connecting:
-            Image(systemName: "server.rack")
-                .foregroundStyle(.orange)
-                .frame(width: 24)
-        case .failed:
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(.red)
-                .frame(width: 24)
         }
     }
 
