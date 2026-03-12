@@ -244,9 +244,9 @@ The landing experience. Users can add, save, and connect to Portainer servers.
 
 After connecting, the user picks which Docker environment to manage.
 
-- [ ] **2.1** Create `PortainerEndpoint` Codable model (id, name, type, status, URL, publicURL, snapshots)
-- [ ] **2.2** Implement `GET /api/endpoints` on `PortainerClient`
-- [ ] **2.3** Build `EnvironmentListView`
+- [x] **2.1** Create `PortainerEndpoint` Codable model (id, name, type, status, URL, publicURL, snapshots)
+- [x] **2.2** Implement `GET /api/endpoints` on `PortainerClient`
+- [x] **2.3** Build `EnvironmentListView`
   - List of environments with name, type badge (Docker, Swarm, Kubernetes), status indicator
   - Pull-to-refresh
   - Search/filter
