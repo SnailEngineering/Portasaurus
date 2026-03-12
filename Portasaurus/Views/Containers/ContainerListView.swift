@@ -269,7 +269,7 @@ private extension Optional where Wrapped: Identifiable {
 
 // MARK: - Previews
 
-#Preview("Container List") {
+#Preview("Container List — Light") {
     NavigationStack {
         ContainerListView(
             client: PortainerClient(serverURL: URL(string: "http://localhost:9000")!),
@@ -277,6 +277,18 @@ private extension Optional where Wrapped: Identifiable {
             previewViewModel: ContainerListViewModel(previewContainers: DockerContainer.mockContainers)
         )
     }
+    .preferredColorScheme(.light)
+}
+
+#Preview("Container List — Dark") {
+    NavigationStack {
+        ContainerListView(
+            client: PortainerClient(serverURL: URL(string: "http://localhost:9000")!),
+            environment: .previewMock,
+            previewViewModel: ContainerListViewModel(previewContainers: DockerContainer.mockContainers)
+        )
+    }
+    .preferredColorScheme(.dark)
 }
 
 #Preview("Empty — No Containers") {

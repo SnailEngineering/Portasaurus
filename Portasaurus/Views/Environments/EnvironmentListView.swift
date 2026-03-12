@@ -142,12 +142,22 @@ struct EnvironmentListView: View {
 }
 // MARK: - Previews
 
-#Preview("Environment List") {
+#Preview("Environment List — Light") {
     EnvironmentListView(
         client: PortainerClient(serverURL: URL(string: "http://localhost:9000")!),
         serverName: "My Portainer",
         previewViewModel: EnvironmentListViewModel(previewEnvironments: PortainerEndpoint.mockEnvironments)
     )
+    .preferredColorScheme(.light)
+}
+
+#Preview("Environment List — Dark") {
+    EnvironmentListView(
+        client: PortainerClient(serverURL: URL(string: "http://localhost:9000")!),
+        serverName: "My Portainer",
+        previewViewModel: EnvironmentListViewModel(previewEnvironments: PortainerEndpoint.mockEnvironments)
+    )
+    .preferredColorScheme(.dark)
 }
 
 #Preview("No Server Selected") {

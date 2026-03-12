@@ -372,7 +372,7 @@ private extension Optional where Wrapped == String {
 
 // MARK: - Previews
 
-#Preview("Running Container") {
+#Preview("Running Container — Light") {
     NavigationStack {
         ContainerDetailView(
             client: PortainerClient(serverURL: URL(string: "http://localhost:9000")!),
@@ -381,9 +381,22 @@ private extension Optional where Wrapped == String {
             previewViewModel: ContainerDetailViewModel(previewDetail: .previewRunning)
         )
     }
+    .preferredColorScheme(.light)
 }
 
-#Preview("Exited Container") {
+#Preview("Running Container — Dark") {
+    NavigationStack {
+        ContainerDetailView(
+            client: PortainerClient(serverURL: URL(string: "http://localhost:9000")!),
+            container: .previewMock,
+            endpointId: 1,
+            previewViewModel: ContainerDetailViewModel(previewDetail: .previewRunning)
+        )
+    }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("Exited Container — Light") {
     NavigationStack {
         ContainerDetailView(
             client: PortainerClient(serverURL: URL(string: "http://localhost:9000")!),
@@ -392,6 +405,19 @@ private extension Optional where Wrapped == String {
             previewViewModel: ContainerDetailViewModel(previewDetail: .previewExited)
         )
     }
+    .preferredColorScheme(.light)
+}
+
+#Preview("Exited Container — Dark") {
+    NavigationStack {
+        ContainerDetailView(
+            client: PortainerClient(serverURL: URL(string: "http://localhost:9000")!),
+            container: .previewMockExited,
+            endpointId: 1,
+            previewViewModel: ContainerDetailViewModel(previewDetail: .previewExited)
+        )
+    }
+    .preferredColorScheme(.dark)
 }
 
 // MARK: - Preview Mock Data
