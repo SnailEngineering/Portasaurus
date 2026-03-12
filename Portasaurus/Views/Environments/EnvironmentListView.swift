@@ -45,13 +45,10 @@ struct EnvironmentListView: View {
             }
         }
         .navigationDestination(for: PortainerEndpoint.self) { env in
-            // Phase 3 will replace this placeholder.
-            ContentUnavailableView {
-                Label(env.name, systemImage: env.type.systemImage)
-            } description: {
-                Text("Container management coming in Phase 3.")
-            }
-            .navigationTitle(env.name)
+            ContainerListView(client: client, environment: env)
+                .navigationDestination(for: DockerContainer.self) { container in
+                    ContainerDetailView(client: client, container: container, endpointId: env.id)
+                }
         }
     }
 
