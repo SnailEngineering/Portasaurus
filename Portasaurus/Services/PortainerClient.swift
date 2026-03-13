@@ -169,6 +169,23 @@ final class PortainerClient: Sendable {
         try await requestVoid(method: .delete, path: "\(dockerBase(endpointId: endpointId))/containers/\(id)?force=true&v=true")
     }
 
+    // MARK: - Images
+
+    /// Lists all images in an environment.
+    func images(endpointId: Int) async throws -> [DockerImage] {
+        try await request(path: "\(dockerBase(endpointId: endpointId))/images/json")
+    }
+
+    /// Removes an image by ID.
+    func removeImage(id: String, endpointId: Int) async throws {
+        try await requestVoid(method: .delete, path: "\(dockerBase(endpointId: endpointId))/images/\(id)?force=true")
+    }
+
+    /// Prunes dangling (unused, untagged) images and returns space reclaimed.
+    func pruneImages(endpointId: Int) async throws -> ImagePruneResponse {
+        try await request(method: .post, path: "\(dockerBase(endpointId: endpointId))/images/prune")
+    }
+
     // MARK: - Stacks
 
     /// Lists all stacks visible to the authenticated user.
