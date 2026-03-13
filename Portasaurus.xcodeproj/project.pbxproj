@@ -24,6 +24,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0785E2BD2F6464BF00D78F62 /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
+		0785E2BE2F6464BF00D78F62 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
+		0785E2BF2F6464BF00D78F62 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		07CE608C2F60BA09005CA102 /* Portasaurus.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Portasaurus.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		07CE609B2F60BA0A005CA102 /* PortasaurusTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PortasaurusTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		07CE60A52F60BA0A005CA102 /* PortasaurusUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PortasaurusUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -38,11 +41,6 @@
 		07CE609E2F60BA0A005CA102 /* PortasaurusTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = PortasaurusTests;
-			sourceTree = "<group>";
-		};
-		07CE60A82F60BA0A005CA102 /* PortasaurusUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = PortasaurusUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -75,9 +73,11 @@
 		07CE60832F60BA09005CA102 = {
 			isa = PBXGroup;
 			children = (
+				0785E2BD2F6464BF00D78F62 /* CLAUDE.md */,
+				0785E2BE2F6464BF00D78F62 /* LICENSE */,
+				0785E2BF2F6464BF00D78F62 /* README.md */,
 				07CE608E2F60BA09005CA102 /* Portasaurus */,
 				07CE609E2F60BA0A005CA102 /* PortasaurusTests */,
-				07CE60A82F60BA0A005CA102 /* PortasaurusUITests */,
 				07CE608D2F60BA09005CA102 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -152,9 +152,6 @@
 			);
 			dependencies = (
 				07CE60A72F60BA0A005CA102 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				07CE60A82F60BA0A005CA102 /* PortasaurusUITests */,
 			);
 			name = PortasaurusUITests;
 			packageProductDependencies = (

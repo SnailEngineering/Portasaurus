@@ -169,6 +169,116 @@ final class PortainerClient: Sendable {
         try await requestVoid(method: .delete, path: "\(dockerBase(endpointId: endpointId))/containers/\(id)?force=true&v=true")
     }
 
+    // MARK: - Logs
+
+    /// Fetches a snapshot of container logs (non-streaming).
+    ///
+    /// Returns raw bytes from the Docker multiplexed log stream. Pass these to
+    /// `LogStreamService` for header-stripping and line parsing.
+    func containerLogsSnapshot(
+        id: String,
+        endpointId: Int,
+        stdout: Bool = true,
+        stderr: Bool = true,
+        timestamps: Bool = false,
+        tail: Int = 100
+    ) async throws -> Data {
+        let path = "\(dockerBase(endpointId: endpointId))/containers/\(id)/logs"
+        guard let baseURLForLogs = URL(string: path, relativeTo: baseURL) else {
+            throw PortainerClientError.invalidURL
+        }
+        var components = URLComponents(url: baseURLForLogs, resolvingAgainstBaseURL: true) ?? URLComponents()
+        components.queryItems = [
+            URLQueryItem(name: "stdout",     value: stdout     ? "1" : "0"),
+            URLQueryItem(name: "stderr",     value: stderr     ? "1" : "0"),
+            URLQueryItem(name: "timestamps", value: timestamps ? "1" : "0"),
+            URLQueryItem(name: "tail",       value: "\(tail)"),
+        ]
+        guard let url = components.url else { throw PortainerClientError.invalidURL }
+
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = HTTPMethod.get.rawValue
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+        urlRequest.setValue(baseURL.absoluteString, forHTTPHeaderField: "Referer")
+        if let token { urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+
+        AppLogger.network.debug("GET \(url, privacy: .public)")
+        let (data, response) = try await session.data(for: urlRequest)
+        guard let http = response as? HTTPURLResponse else { throw PortainerClientError.httpError(statusCode: -1) }
+        AppLogger.network.info("GET \(url, privacy: .public) → \(http.statusCode, privacy: .public)")
+
+        if http.statusCode == 401 { token = nil; throw PortainerClientError.unauthorized }
+        if http.statusCode >= 400 { throw PortainerClientError.httpError(statusCode: http.statusCode) }
+        return data
+    }
+
+    /// Opens a live-streaming container log connection.
+    ///
+    /// Delivers raw byte chunks from the Docker multiplexed stream as an
+    /// `AsyncThrowingStream<Data, Error>`. Pass chunks to `LogStreamService`
+    /// for header-stripping and line parsing.
+    func containerLogsStream(
+        id: String,
+        endpointId: Int,
+        stdout: Bool = true,
+        stderr: Bool = true,
+        timestamps: Bool = false,
+        tail: Int = 100
+    ) -> AsyncThrowingStream<Data, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                let path = "\(dockerBase(endpointId: endpointId))/containers/\(id)/logs"
+                guard let baseURLForStream = URL(string: path, relativeTo: baseURL) else {
+                    continuation.finish(throwing: PortainerClientError.invalidURL)
+                    return
+                }
+                var components = URLComponents(url: baseURLForStream, resolvingAgainstBaseURL: true) ?? URLComponents()
+                components.queryItems = [
+                    URLQueryItem(name: "stdout",     value: stdout     ? "1" : "0"),
+                    URLQueryItem(name: "stderr",     value: stderr     ? "1" : "0"),
+                    URLQueryItem(name: "timestamps", value: timestamps ? "1" : "0"),
+                    URLQueryItem(name: "tail",       value: "\(tail)"),
+                    URLQueryItem(name: "follow",     value: "1"),
+                ]
+                guard let url = components.url else {
+                    continuation.finish(throwing: PortainerClientError.invalidURL)
+                    return
+                }
+
+                var urlRequest = URLRequest(url: url)
+                urlRequest.httpMethod = HTTPMethod.get.rawValue
+                urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+                urlRequest.setValue(baseURL.absoluteString, forHTTPHeaderField: "Referer")
+                urlRequest.timeoutInterval = 30
+                if let token { urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+
+                AppLogger.network.info("Opening container log stream for \(id, privacy: .public)")
+                do {
+                    let (bytes, response) = try await session.bytes(for: urlRequest)
+                    if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
+                        continuation.finish(throwing: PortainerClientError.httpError(statusCode: http.statusCode))
+                        return
+                    }
+                    // Buffer accumulates bytes and flushes when we have a complete chunk.
+                    // We deliver chunks of up to 4 KB to keep the UI responsive.
+                    var buffer = Data()
+                    for try await byte in bytes {
+                        buffer.append(byte)
+                        if buffer.count >= 4096 {
+                            continuation.yield(buffer)
+                            buffer = Data()
+                        }
+                    }
+                    if !buffer.isEmpty { continuation.yield(buffer) }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     // MARK: - Events stream
 
     /// Opens the Docker events stream for an environment and yields decoded `DockerEvent`

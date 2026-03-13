@@ -11,6 +11,7 @@ struct ContainerDetailView: View {
 
     @State private var viewModel: ContainerDetailViewModel
     @State private var isPreview = false
+    @State private var showLogs = false
 
     init(client: PortainerClient, container: DockerContainer, endpointId: Int) {
         self.client = client
@@ -47,6 +48,9 @@ struct ContainerDetailView: View {
         .task {
             guard !isPreview else { return }
             await viewModel.load(client: client, containerId: container.id, endpointId: endpointId)
+        }
+        .navigationDestination(isPresented: $showLogs) {
+            ContainerLogsView(client: client, container: container, endpointId: endpointId)
         }
         .alert("Action Failed", isPresented: $viewModel.actionError.isPresented) {
             Button("OK", role: .cancel) { viewModel.actionError = nil }
@@ -286,6 +290,13 @@ struct ContainerDetailView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItemGroup(placement: .automatic) {
+            // Logs navigation button — always visible once detail is loaded.
+            Button {
+                showLogs = true
+            } label: {
+                Label("Logs", systemImage: "doc.text.magnifyingglass")
+            }
+
             if viewModel.isActing {
                 ProgressView()
             }
