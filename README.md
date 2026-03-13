@@ -295,13 +295,13 @@ Drill into a single container to see its full configuration.
 
 View and stream container logs in real-time.
 
-- [ ] **5.1** Implement container logs endpoint — `GET .../containers/{id}/logs`
+- [x] **5.1** Implement container logs endpoint — `GET .../containers/{id}/logs`
   - Support query params: `stdout`, `stderr`, `timestamps`, `tail`, `since`, `follow`
-- [ ] **5.2** Create `LogStreamService`
+- [x] **5.2** Create `LogStreamService`
   - Uses `URLSession` bytes streaming for `follow=true`
   - Parses Docker multiplexed stream format (8-byte header: stream type + length)
   - Delivers log lines as an `AsyncSequence`
-- [ ] **5.3** Build `ContainerLogsView`
+- [x] **5.3** Build `ContainerLogsView`
   - Scrollable log output with monospace font
   - Auto-scroll to bottom (with manual scroll override)
   - Toggle: follow/pause live streaming

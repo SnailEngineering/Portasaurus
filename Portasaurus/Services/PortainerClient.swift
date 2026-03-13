@@ -169,6 +169,40 @@ final class PortainerClient: Sendable {
         try await requestVoid(method: .delete, path: "\(dockerBase(endpointId: endpointId))/containers/\(id)?force=true&v=true")
     }
 
+    // MARK: - Stacks
+
+    /// Lists all stacks visible to the authenticated user.
+    /// Pass `endpointId` to filter by a specific environment.
+    func stacks(endpointId: Int? = nil) async throws -> [PortainerStack] {
+        if let endpointId {
+            // Filter JSON: {"EndpointID":[<id>]}  — percent-encoded for query string.
+            let filter = #"{"EndpointID":[\#(endpointId)]}"#
+                .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+            return try await request(path: "/api/stacks?filters=\(filter)")
+        }
+        return try await request(path: "/api/stacks")
+    }
+
+    /// Returns detailed info for a single stack.
+    func stack(id: Int) async throws -> PortainerStack {
+        try await request(path: "/api/stacks/\(id)")
+    }
+
+    /// Returns the compose file content for a stack.
+    func stackFile(id: Int) async throws -> PortainerStackFile {
+        try await request(path: "/api/stacks/\(id)/file")
+    }
+
+    /// Starts a stopped stack.
+    func startStack(id: Int, endpointId: Int) async throws {
+        try await requestVoid(method: .post, path: "/api/stacks/\(id)/start?endpointId=\(endpointId)")
+    }
+
+    /// Stops a running stack.
+    func stopStack(id: Int, endpointId: Int) async throws {
+        try await requestVoid(method: .post, path: "/api/stacks/\(id)/stop?endpointId=\(endpointId)")
+    }
+
     // MARK: - Logs
 
     /// Fetches a snapshot of container logs (non-streaming).
