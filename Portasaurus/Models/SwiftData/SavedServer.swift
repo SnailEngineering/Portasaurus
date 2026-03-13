@@ -18,6 +18,8 @@ final class SavedServer {
     var serverURL: String
     var username: String
     var trustSelfSignedCertificates: Bool
+    /// When `true`, the app attempts to authenticate with this server automatically on launch.
+    var autoReconnect: Bool
     var dateAdded: Date
     var lastConnected: Date?
 
@@ -27,13 +29,15 @@ final class SavedServer {
         name: String,
         serverURL: String,
         username: String,
-        trustSelfSignedCertificates: Bool = false
+        trustSelfSignedCertificates: Bool = false,
+        autoReconnect: Bool = false
     ) {
         self.id = UUID()
         self.name = name
         self.serverURL = serverURL
         self.username = username
         self.trustSelfSignedCertificates = trustSelfSignedCertificates
+        self.autoReconnect = autoReconnect
         self.dateAdded = Date()
         self.lastConnected = nil
     }

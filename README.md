@@ -244,9 +244,9 @@ The landing experience. Users can add, save, and connect to Portainer servers.
 
 After connecting, the user picks which Docker environment to manage.
 
-- [ ] **2.1** Create `PortainerEndpoint` Codable model (id, name, type, status, URL, publicURL, snapshots)
-- [ ] **2.2** Implement `GET /api/endpoints` on `PortainerClient`
-- [ ] **2.3** Build `EnvironmentListView`
+- [x] **2.1** Create `PortainerEndpoint` Codable model (id, name, type, status, URL, publicURL, snapshots)
+- [x] **2.2** Implement `GET /api/endpoints` on `PortainerClient`
+- [x] **2.3** Build `EnvironmentListView`
   - List of environments with name, type badge (Docker, Swarm, Kubernetes), status indicator
   - Pull-to-refresh
   - Search/filter
@@ -257,28 +257,28 @@ After connecting, the user picks which Docker environment to manage.
 
 The primary operational view. See all containers and perform quick actions.
 
-- [ ] **3.1** Create `DockerContainer` Codable model (id, names, image, state, status, ports, created, labels)
-- [ ] **3.2** Implement container list endpoint on `PortainerClient` — `GET .../containers/json?all=true`
-- [ ] **3.3** Build `ContainerListView`
+- [x] **3.1** Create `DockerContainer` Codable model (id, names, image, state, status, ports, created, labels)
+- [x] **3.2** Implement container list endpoint on `PortainerClient` — `GET .../containers/json?all=true`
+- [x] **3.3** Build `ContainerListView`
   - List showing container name, image, state (with color-coded `StatusBadge`)
   - Filter by state: all, running, stopped, paused
   - Search by name
   - Pull-to-refresh
   - Auto-refresh on a timer (configurable, default 10s)
-- [ ] **3.4** Add container quick actions (swipe actions or context menu)
+- [x] **3.4** Add container quick actions (swipe actions or context menu)
   - Start / Stop / Restart
   - Confirmation for destructive actions (kill, remove)
   - Visual feedback during action (loading state)
-- [ ] **3.5** Create `StatusBadge` shared component
+- [x] **3.5** Create `StatusBadge` shared component
   - Color-coded pill: green (running), red (exited), yellow (paused), gray (created/dead)
 
 ### Phase 4: Container Detail & Inspection
 
 Drill into a single container to see its full configuration.
 
-- [ ] **4.1** Create `DockerContainerDetail` Codable model (full inspect response — config, network settings, mounts, state)
-- [ ] **4.2** Implement container inspect endpoint — `GET .../containers/{id}/json`
-- [ ] **4.3** Build `ContainerDetailView`
+- [x] **4.1** Create `DockerContainerDetail` Codable model (full inspect response — config, network settings, mounts, state)
+- [x] **4.2** Implement container inspect endpoint — `GET .../containers/{id}/json`
+- [x] **4.3** Build `ContainerDetailView`
   - Sections:
     - **Status** — state, started at, finished at, restart count, health status
     - **Configuration** — image, command, entrypoint, working dir, user

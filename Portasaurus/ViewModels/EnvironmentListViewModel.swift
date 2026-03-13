@@ -20,6 +20,15 @@ final class EnvironmentListViewModel {
         }
     }
 
+    // MARK: - Init
+
+    init() {}
+
+    /// Preview-only initializer that pre-loads environments without a network call.
+    init(previewEnvironments: [PortainerEndpoint]) {
+        environments = previewEnvironments
+    }
+
     // MARK: - Actions
 
     func load(from client: PortainerClient) async {

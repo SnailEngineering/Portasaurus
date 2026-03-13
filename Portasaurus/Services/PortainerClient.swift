@@ -132,6 +132,100 @@ final class PortainerClient: Sendable {
         try await request(path: "/api/endpoints")
     }
 
+    // MARK: - Containers
+
+    /// Base Docker proxy path for a given endpoint.
+    private func dockerBase(endpointId: Int) -> String {
+        "/api/endpoints/\(endpointId)/docker"
+    }
+
+    /// Lists all containers (running + stopped) for an environment.
+    func containers(endpointId: Int) async throws -> [DockerContainer] {
+        try await request(path: "\(dockerBase(endpointId: endpointId))/containers/json?all=true")
+    }
+
+    /// Returns full inspection data for a single container.
+    func containerDetail(id: String, endpointId: Int) async throws -> DockerContainerDetail {
+        try await request(path: "\(dockerBase(endpointId: endpointId))/containers/\(id)/json")
+    }
+
+    func startContainer(id: String, endpointId: Int) async throws {
+        try await requestVoid(method: .post, path: "\(dockerBase(endpointId: endpointId))/containers/\(id)/start")
+    }
+
+    func stopContainer(id: String, endpointId: Int) async throws {
+        try await requestVoid(method: .post, path: "\(dockerBase(endpointId: endpointId))/containers/\(id)/stop")
+    }
+
+    func restartContainer(id: String, endpointId: Int) async throws {
+        try await requestVoid(method: .post, path: "\(dockerBase(endpointId: endpointId))/containers/\(id)/restart")
+    }
+
+    func killContainer(id: String, endpointId: Int) async throws {
+        try await requestVoid(method: .post, path: "\(dockerBase(endpointId: endpointId))/containers/\(id)/kill")
+    }
+
+    func removeContainer(id: String, endpointId: Int) async throws {
+        try await requestVoid(method: .delete, path: "\(dockerBase(endpointId: endpointId))/containers/\(id)?force=true&v=true")
+    }
+
+    // MARK: - Events stream
+
+    /// Opens the Docker events stream for an environment and yields decoded `DockerEvent`
+    /// values as they arrive. The stream runs until the task is cancelled or the
+    /// connection is closed by the server.
+    ///
+    /// Usage:
+    /// ```swift
+    /// for try await event in client.containerEvents(endpointId: id) {
+    ///     if event.shouldRefreshContainers { ... }
+    /// }
+    /// ```
+    func containerEvents(endpointId: Int) -> AsyncThrowingStream<DockerEvent, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                guard let url = URL(string: "\(dockerBase(endpointId: endpointId))/events?filters=%7B%22type%22%3A%5B%22container%22%5D%7D",
+                                    relativeTo: baseURL) else {
+                    continuation.finish(throwing: PortainerClientError.invalidURL)
+                    return
+                }
+
+                var urlRequest = URLRequest(url: url)
+                urlRequest.httpMethod = HTTPMethod.get.rawValue
+                urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+                urlRequest.setValue(baseURL.absoluteString, forHTTPHeaderField: "Referer")
+                // No timeout for the resource — the stream is indefinitely long.
+                urlRequest.timeoutInterval = 30
+                if let token {
+                    urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                }
+
+                AppLogger.network.info("Opening Docker events stream for endpoint \(endpointId)")
+
+                do {
+                    let (bytes, response) = try await session.bytes(for: urlRequest)
+
+                    if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
+                        continuation.finish(throwing: PortainerClientError.httpError(statusCode: http.statusCode))
+                        return
+                    }
+
+                    let decoder = JSONDecoder()
+                    for try await line in bytes.lines {
+                        guard !line.isEmpty, let data = line.data(using: .utf8) else { continue }
+                        if let event = try? decoder.decode(DockerEvent.self, from: data) {
+                            continuation.yield(event)
+                        }
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     // MARK: - Generic Request
 
     /// Performs an API request and decodes the JSON response.

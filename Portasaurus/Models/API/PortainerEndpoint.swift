@@ -77,17 +77,46 @@ struct PortainerEndpoint: Decodable, Identifiable, Hashable, Sendable {
         let stoppedContainerCount:   Int
         let healthyContainerCount:   Int
         let unhealthyContainerCount: Int
+        let volumeCount:             Int
+        let imageCount:              Int
+        let stackCount:              Int
+        let totalCPU:                Int
+        let totalMemory:             Int64
         let dockerVersion:           String?
+        let time:                    Int64?
 
         enum CodingKeys: String, CodingKey {
             case runningContainerCount   = "RunningContainerCount"
             case stoppedContainerCount   = "StoppedContainerCount"
             case healthyContainerCount   = "HealthyContainerCount"
             case unhealthyContainerCount = "UnhealthyContainerCount"
+            case volumeCount             = "VolumeCount"
+            case imageCount              = "ImageCount"
+            case stackCount              = "StackCount"
+            case totalCPU                = "TotalCPU"
+            case totalMemory             = "TotalMemory"
             case dockerVersion           = "DockerVersion"
+            case time                    = "Time"
+        }
+
+        /// The snapshot timestamp as a `Date`, or `nil` if absent.
+        var date: Date? {
+            guard let time else { return nil }
+            return Date(timeIntervalSince1970: TimeInterval(time))
         }
 
         var totalContainerCount: Int { runningContainerCount + stoppedContainerCount }
+
+        /// Formats `totalMemory` (bytes) as a compact human-readable string, e.g. "23.6 GB".
+        var formattedMemory: String {
+            let bytes = Double(totalMemory)
+            let gb = bytes / 1_073_741_824
+            if gb >= 1 {
+                return String(format: "%.1f GB", gb)
+            }
+            let mb = bytes / 1_048_576
+            return String(format: "%.0f MB", mb)
+        }
     }
 
     // MARK: - Convenience
