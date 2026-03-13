@@ -12,6 +12,7 @@ struct StackDetailView: View {
 
     @State private var viewModel: StackDetailViewModel
     @State private var isPreview = false
+    @State private var showEnvVars = false
 
     // MARK: - Init
 
@@ -117,21 +118,45 @@ struct StackDetailView: View {
     // MARK: - Env Section
 
     private func envSection(_ env: [PortainerStack.EnvPair]) -> some View {
-        Section("Environment Variables (\(env.count))") {
-            ForEach(env, id: \.name) { pair in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(pair.name)
-                        .font(.caption.monospaced().weight(.semibold))
-                        .foregroundStyle(.primary)
-                    Text(pair.value.isEmpty ? "(empty)" : pair.value)
-                        .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
-                        .lineLimit(3)
-                        .truncationMode(.tail)
+        Section {
+            // Always-visible toggle row
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showEnvVars.toggle()
                 }
-                .padding(.vertical, 2)
+            } label: {
+                HStack {
+                    Label(
+                        showEnvVars ? "Hide Environment Variables" : "Show Environment Variables",
+                        systemImage: showEnvVars ? "eye.slash" : "eye"
+                    )
+                    .foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .rotationEffect(.degrees(showEnvVars ? 90 : 0))
+                }
             }
+
+            if showEnvVars {
+                ForEach(env, id: \.name) { pair in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(pair.name)
+                            .font(.caption.monospaced().weight(.semibold))
+                            .foregroundStyle(.primary)
+                        Text(pair.value.isEmpty ? "(empty)" : pair.value)
+                            .font(.caption.monospaced())
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                            .lineLimit(3)
+                            .truncationMode(.tail)
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+        } header: {
+            Text("Environment Variables (\(env.count))")
         }
     }
 
