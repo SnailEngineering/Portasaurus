@@ -11,6 +11,7 @@ struct StackDetailView: View {
     let environment: PortainerEndpoint
 
     @State private var viewModel: StackDetailViewModel
+    @State private var containerViewModel: ContainerListViewModel
     @State private var isPreview = false
     @State private var showEnvVars = false
 
@@ -24,6 +25,7 @@ struct StackDetailView: View {
         self.stack = stack
         self.environment = environment
         self._viewModel = State(initialValue: StackDetailViewModel())
+        self._containerViewModel = State(initialValue: ContainerListViewModel(stackName: stack.name))
     }
 
     init(client: PortainerClient, stack: PortainerStack, environment: PortainerEndpoint, previewViewModel: StackDetailViewModel) {
@@ -31,6 +33,10 @@ struct StackDetailView: View {
         self.stack = stack
         self.environment = environment
         self._viewModel = State(initialValue: previewViewModel)
+        self._containerViewModel = State(initialValue: ContainerListViewModel(
+            previewContainers: DockerContainer.previewStackContainers(stackName: stack.name),
+            stackName: stack.name
+        ))
         self._isPreview = State(initialValue: true)
     }
 
@@ -55,15 +61,36 @@ struct StackDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
 #endif
         .toolbar { toolbarContent }
+        .navigationDestination(for: DockerContainer.self) { container in
+            ContainerDetailView(client: client, container: container, endpointId: endpointId)
+        }
         .refreshable {
-            await viewModel.load(client: client, stackId: stack.id)
-            await viewModel.loadComposeFile(client: client, stackId: stack.id)
+            async let detail: () = viewModel.load(client: client, stackId: stack.id)
+            async let file: () = viewModel.loadComposeFile(client: client, stackId: stack.id)
+            async let containers: () = containerViewModel.load(client: client, endpointId: endpointId)
+            _ = await (detail, file, containers)
         }
         .task {
             guard !isPreview else { return }
             async let detail: () = viewModel.load(client: client, stackId: stack.id)
             async let file: () = viewModel.loadComposeFile(client: client, stackId: stack.id)
-            _ = await (detail, file)
+            async let containers: () = containerViewModel.loadAndListenForEvents(client: client, endpointId: endpointId)
+            _ = await (detail, file, containers)
+        }
+        .confirmationDialog(
+            containerDestructiveTitle,
+            isPresented: $containerViewModel.pendingDestructiveAction.isPresented,
+            titleVisibility: .visible
+        ) {
+            if let action = containerViewModel.pendingDestructiveAction {
+                Button(containerDestructiveButtonLabel(for: action.kind), role: .destructive) {
+                    Task { await containerViewModel.confirmDestructive(action, client: client, endpointId: endpointId) }
+                }
+            }
+        } message: {
+            if let action = containerViewModel.pendingDestructiveAction {
+                Text(containerDestructiveMessage(for: action))
+            }
         }
         .alert("Action Failed", isPresented: $viewModel.actionError.isPresented) {
             Button("OK", role: .cancel) { viewModel.actionError = nil }
@@ -121,17 +148,145 @@ struct StackDetailView: View {
 
     // MARK: - Containers Section
 
+    @ViewBuilder
     private func containersSection(_ detail: PortainerStack) -> some View {
         Section {
-            NavigationLink {
-                ContainerListView(
-                    client: client,
-                    environment: environment,
-                    stackName: detail.name
-                )
-            } label: {
-                Label("Containers", systemImage: "shippingbox")
+            if containerViewModel.isLoading && containerViewModel.containers.isEmpty {
+                HStack {
+                    ProgressView()
+                    Text("Loading containers…")
+                        .foregroundStyle(.secondary)
+                }
+            } else if containerViewModel.filtered.isEmpty {
+                Text("No containers")
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(containerViewModel.filtered) { container in
+                    NavigationLink(value: container) {
+                        containerRow(container)
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        containerTrailingSwipeActions(for: container)
+                    }
+                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                        containerLeadingSwipeActions(for: container)
+                    }
+                    .contextMenu { containerContextMenu(for: container) }
+                    .disabled(containerViewModel.actionInProgress == container.id)
+                }
             }
+        } header: {
+            if containerViewModel.containers.isEmpty {
+                Text("Containers")
+            } else {
+                Text("Containers (\(containerViewModel.filtered.count))")
+            }
+        }
+    }
+
+    private func containerRow(_ container: DockerContainer) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(container.displayName)
+                    .font(.body)
+                    .lineLimit(1)
+                Text(container.image)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 4) {
+                StatusBadge(containerState: container.state)
+                if containerViewModel.actionInProgress == container.id {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                }
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    @ViewBuilder
+    private func containerTrailingSwipeActions(for container: DockerContainer) -> some View {
+        if container.state.canStop {
+            Button {
+                Task { await containerViewModel.perform(.stop, on: container, client: client, endpointId: endpointId) }
+            } label: {
+                Label("Stop", systemImage: "stop.fill")
+            }
+            .tint(.red)
+        }
+        Button(role: .destructive) {
+            containerViewModel.pendingDestructiveAction = .init(kind: .remove, container: container)
+        } label: {
+            Label("Remove", systemImage: "trash")
+        }
+    }
+
+    @ViewBuilder
+    private func containerLeadingSwipeActions(for container: DockerContainer) -> some View {
+        if container.state.canStart {
+            Button {
+                Task { await containerViewModel.perform(.start, on: container, client: client, endpointId: endpointId) }
+            } label: {
+                Label("Start", systemImage: "play.fill")
+            }
+            .tint(.green)
+        }
+        if container.state.canRestart {
+            Button {
+                Task { await containerViewModel.perform(.restart, on: container, client: client, endpointId: endpointId) }
+            } label: {
+                Label("Restart", systemImage: "arrow.clockwise")
+            }
+            .tint(.orange)
+        }
+    }
+
+    @ViewBuilder
+    private func containerContextMenu(for container: DockerContainer) -> some View {
+        if container.state.canStart {
+            Button {
+                Task { await containerViewModel.perform(.start, on: container, client: client, endpointId: endpointId) }
+            } label: { Label("Start", systemImage: "play.fill") }
+        }
+        if container.state.canStop {
+            Button {
+                Task { await containerViewModel.perform(.stop, on: container, client: client, endpointId: endpointId) }
+            } label: { Label("Stop", systemImage: "stop.fill") }
+        }
+        if container.state.canRestart {
+            Button {
+                Task { await containerViewModel.perform(.restart, on: container, client: client, endpointId: endpointId) }
+            } label: { Label("Restart", systemImage: "arrow.clockwise") }
+        }
+        Divider()
+        Button(role: .destructive) {
+            containerViewModel.pendingDestructiveAction = .init(kind: .kill, container: container)
+        } label: { Label("Kill", systemImage: "bolt.fill") }
+        Button(role: .destructive) {
+            containerViewModel.pendingDestructiveAction = .init(kind: .remove, container: container)
+        } label: { Label("Remove", systemImage: "trash") }
+    }
+
+    // MARK: - Container Destructive Action Helpers
+
+    private var containerDestructiveTitle: String {
+        guard let action = containerViewModel.pendingDestructiveAction else { return "" }
+        return action.kind == .kill ? "Kill Container?" : "Remove Container?"
+    }
+
+    private func containerDestructiveButtonLabel(for kind: ContainerListViewModel.DestructiveAction.Kind) -> String {
+        kind == .kill ? "Kill" : "Remove"
+    }
+
+    private func containerDestructiveMessage(for action: ContainerListViewModel.DestructiveAction) -> String {
+        switch action.kind {
+        case .kill:
+            return "Forcefully terminate \"\(action.container.displayName)\"? The container will remain and can be restarted."
+        case .remove:
+            return "Permanently remove \"\(action.container.displayName)\" and its associated volumes? This cannot be undone."
         }
     }
 
@@ -280,9 +435,16 @@ struct StackDetailView: View {
     }
 }
 
-// MARK: - Optional binding helper
+// MARK: - Optional binding helpers
 
 private extension Optional where Wrapped == String {
+    var isPresented: Bool {
+        get { self != nil }
+        set { if !newValue { self = nil } }
+    }
+}
+
+private extension Optional where Wrapped: Identifiable {
     var isPresented: Bool {
         get { self != nil }
         set { if !newValue { self = nil } }
@@ -389,6 +551,34 @@ private extension PortainerStack {
         """
         return try! JSONDecoder().decode(PortainerStack.self, from: Data(json.utf8))
     }()
+}
+
+private extension DockerContainer {
+    static func previewStackContainers(stackName: String) -> [DockerContainer] {
+        [
+            makePreview(id: "a1b2c3", name: "\(stackName)_nginx_1",    image: "nginx:alpine",   state: "running", status: "Up 3 days",  stackName: stackName),
+            makePreview(id: "b2c3d4", name: "\(stackName)_api_1",      image: "node:20-alpine",  state: "running", status: "Up 1 hour",  stackName: stackName),
+            makePreview(id: "c3d4e5", name: "\(stackName)_worker_1",   image: "node:20-alpine",  state: "exited",  status: "Exited (0) 5 min ago", stackName: stackName),
+        ]
+    }
+
+    private static func makePreview(id: String, name: String, image: String, state: String, status: String, stackName: String) -> DockerContainer {
+        let json = """
+        {
+          "Id": "\(id)",
+          "Names": ["/\(name)"],
+          "Image": "\(image)",
+          "ImageID": "sha256:abc123",
+          "Command": "/entrypoint.sh",
+          "Created": 1700000000,
+          "State": "\(state)",
+          "Status": "\(status)",
+          "Ports": [],
+          "Labels": {"com.docker.compose.project": "\(stackName)"}
+        }
+        """
+        return try! JSONDecoder().decode(DockerContainer.self, from: Data(json.utf8))
+    }
 }
 
 private extension String {
