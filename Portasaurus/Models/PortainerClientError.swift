@@ -16,7 +16,7 @@ enum PortainerClientError: LocalizedError {
         case .unauthorized:
             "Authentication required. Please log in again."
         case .forbidden:
-            "Permission denied. This action requires Administrator access in Portainer."
+            "Access denied (403). The server rejected this request — check your Portainer role and environment access policy."
         case .apiError(let statusCode, let apiError):
             "Server error (\(statusCode)): \(apiError.message)"
         case .httpError(let statusCode):
