@@ -45,9 +45,12 @@ struct ContainerListView: View {
         .toolbar { toolbarContent }
         .searchable(text: $viewModel.searchText, prompt: "Search containers")
         .refreshable { await viewModel.load(client: client, endpointId: environment.id) }
+        .navigationDestination(for: DockerContainer.self) { container in
+            ContainerDetailView(client: client, container: container, endpointId: environment.id)
+        }
         .task {
             guard !isPreview else { return }
-            await viewModel.loadAndAutoRefresh(client: client, endpointId: environment.id)
+            await viewModel.loadAndListenForEvents(client: client, endpointId: environment.id)
         }
         .confirmationDialog(
             confirmationTitle,

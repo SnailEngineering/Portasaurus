@@ -52,11 +52,6 @@ struct EnvironmentListView: View {
         .navigationDestination(for: EnvironmentSection.self) { destination in
             destination.view(client: client)
         }
-        .navigationDestination(for: DockerContainer.self) { container in
-            // Populated by ContainerListView's own push; forwarded here so the
-            // NavigationStack can resolve it at any depth.
-            EmptyView()
-        }
     }
 
     // MARK: - Scroll content

@@ -53,6 +53,7 @@ final class ContainerListViewModel {
 
             return matchesState && matchesSearch
         }
+        .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
     }
 
     // MARK: - Loading
@@ -71,13 +72,32 @@ final class ContainerListViewModel {
         }
     }
 
-    /// Loads once then polls every 10 seconds until the task is cancelled.
-    func loadAndAutoRefresh(client: PortainerClient, endpointId: Int) async {
+    /// Loads the container list once, then subscribes to the Docker events stream
+    /// and refreshes only when a relevant container lifecycle event arrives.
+    ///
+    /// The stream is cancelled automatically when the calling `Task` is cancelled
+    /// (i.e. when the view disappears). Falls back to a 30-second polling interval
+    /// if the events stream fails or is unavailable.
+    func loadAndListenForEvents(client: PortainerClient, endpointId: Int) async {
         await load(client: client, endpointId: endpointId)
-        while !Task.isCancelled {
-            try? await Task.sleep(for: .seconds(10))
-            guard !Task.isCancelled else { break }
-            await load(client: client, endpointId: endpointId)
+
+        do {
+            for try await event in client.containerEvents(endpointId: endpointId) {
+                guard !Task.isCancelled else { break }
+                if event.shouldRefreshContainers {
+                    AppLogger.viewModel.debug("Container event '\(event.action, privacy: .public)' — refreshing list")
+                    await load(client: client, endpointId: endpointId)
+                }
+            }
+        } catch {
+            // Stream ended unexpectedly (network loss, auth expiry, etc.).
+            // Fall back to polling so the list doesn't go stale.
+            AppLogger.viewModel.warning("Events stream ended: \(error.localizedDescription, privacy: .public) — falling back to polling")
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                guard !Task.isCancelled else { break }
+                await load(client: client, endpointId: endpointId)
+            }
         }
     }
 

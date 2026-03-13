@@ -7,7 +7,7 @@ final class ContainerDetailViewModel {
     // MARK: - State
 
     private(set) var detail: DockerContainerDetail?
-    private(set) var isLoading = false
+    private(set) var isLoading = true
     private(set) var isActing = false
     var loadError: String?
     var actionError: String?
