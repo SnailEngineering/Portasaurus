@@ -179,11 +179,35 @@ private struct EnvironmentCard: View {
                             .foregroundStyle(.tertiary)
                     }
                 }
+                if let date = env.snapshot?.date {
+                    HStack(spacing: 4) {
+                        Image(systemName: "waveform.path.ecg")
+                        Text(date, format: .dateTime.year().month().day().hour().minute().second())
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                }
             }
 
             Spacer(minLength: 0)
 
-            StatusBadge(status: env.status)
+            VStack(alignment: .trailing, spacing: 4) {
+                StatusBadge(status: env.status)
+                if let snap = env.snapshot {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "cpu")
+                            Text("\(snap.totalCPU) CPU")
+                        }
+                        HStack(spacing: 4) {
+                            Image(systemName: "memorychip")
+                            Text(snap.formattedMemory)
+                        }
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                }
+            }
         }
     }
 
@@ -375,7 +399,8 @@ private extension PortainerEndpoint {
                 "StackCount": \(item.stacks),
                 "TotalCPU": \(item.cpu),
                 "TotalMemory": \(memBytes(item.memoryGB)),
-                "DockerVersion": "24.0.7"
+                "DockerVersion": "24.0.7",
+                "Time": \(Int(Date().timeIntervalSince1970))
               }]
             }
             """
