@@ -175,8 +175,8 @@ final class PortainerClient: Sendable {
     /// Pass `endpointId` to filter by a specific environment.
     func stacks(endpointId: Int? = nil) async throws -> [PortainerStack] {
         if let endpointId {
-            // Filter JSON: {"EndpointID":[<id>]}  — percent-encoded for query string.
-            let filter = #"{"EndpointID":[\#(endpointId)]}"#
+            // Filter JSON: {"EndpointID":<id>}  — percent-encoded for query string.
+            let filter = #"{"EndpointID":\#(endpointId)}"#
                 .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
             return try await request(path: "/api/stacks?filters=\(filter)")
         }

@@ -314,18 +314,18 @@ View and stream container logs in real-time.
 
 View and control Docker Compose stacks.
 
-- [ ] **6.1** Create `PortainerStack` Codable model (id, name, type, status, endpointId, env, creationDate)
-- [ ] **6.2** Implement stack endpoints on `PortainerClient`
+- [x] **6.1** Create `PortainerStack` Codable model (id, name, type, status, endpointId, env, creationDate)
+- [x] **6.2** Implement stack endpoints on `PortainerClient`
   - List: `GET /api/stacks`
   - Detail: `GET /api/stacks/{id}`
   - Compose file: `GET /api/stacks/{id}/file`
   - Start: `POST /api/stacks/{id}/start`
   - Stop: `POST /api/stacks/{id}/stop`
-- [ ] **6.3** Build `StackListView`
+- [x] **6.3** Build `StackListView`
   - List showing stack name, status, number of containers (from related containers)
   - Start/stop actions via swipe or context menu
   - Filter by status (active/inactive)
-- [ ] **6.4** Build `StackDetailView`
+- [x] **6.4** Build `StackDetailView`
   - Stack metadata (name, type, creation date, environment variables)
   - Compose file viewer with syntax-highlighted YAML (read-only initially)
   - List of containers belonging to this stack (reuse `ContainerListView` with filter)
