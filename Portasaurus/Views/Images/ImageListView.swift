@@ -185,7 +185,7 @@ struct ImageListView: View {
             Button {
                 showPruneConfirm = true
             } label: {
-                Label("Prune", systemImage: "trash.slash")
+                Text("Prune")
             }
             .disabled(viewModel.isActing || viewModel.images.isEmpty)
         }

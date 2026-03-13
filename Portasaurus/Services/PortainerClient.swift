@@ -463,6 +463,11 @@ final class PortainerClient: Sendable {
             throw PortainerClientError.unauthorized
         }
 
+        if statusCode == 403 {
+            AppLogger.auth.warning("Forbidden (403) on \(path, privacy: .public)")
+            throw PortainerClientError.forbidden
+        }
+
         // Other error responses
         if statusCode >= 400 {
             if let apiError = try? JSONDecoder().decode(PortainerAPIError.self, from: data) {
@@ -539,6 +544,11 @@ final class PortainerClient: Sendable {
             AppLogger.auth.warning("Unauthorized (401) on \(path, privacy: .public) — clearing token")
             token = nil
             throw PortainerClientError.unauthorized
+        }
+
+        if statusCode == 403 {
+            AppLogger.auth.warning("Forbidden (403) on \(path, privacy: .public)")
+            throw PortainerClientError.forbidden
         }
 
         if statusCode >= 400 {

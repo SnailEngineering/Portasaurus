@@ -4,6 +4,7 @@ import Foundation
 enum PortainerClientError: LocalizedError {
     case invalidURL
     case unauthorized
+    case forbidden
     case apiError(statusCode: Int, apiError: PortainerAPIError)
     case httpError(statusCode: Int)
     case decodingError(DecodingError)
@@ -14,6 +15,8 @@ enum PortainerClientError: LocalizedError {
             "Invalid server URL."
         case .unauthorized:
             "Authentication required. Please log in again."
+        case .forbidden:
+            "Permission denied. This action requires Administrator access in Portainer."
         case .apiError(let statusCode, let apiError):
             "Server error (\(statusCode)): \(apiError.message)"
         case .httpError(let statusCode):
