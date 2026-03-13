@@ -53,7 +53,7 @@ struct StackListView: View {
             await viewModel.load(client: client, endpointId: environment.id)
         }
         .navigationDestination(for: PortainerStack.self) { stack in
-            StackDetailView(client: client, stack: stack, endpointId: environment.id)
+            StackDetailView(client: client, stack: stack, environment: environment)
         }
         .toolbar { toolbarContent }
         .alert("Action Failed", isPresented: $viewModel.actionError.isPresented) {

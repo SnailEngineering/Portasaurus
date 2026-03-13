@@ -2,25 +2,35 @@ import SwiftUI
 
 /// Lists all containers for a Portainer environment.
 ///
-/// Auto-refreshes every 10 seconds while visible. Supports filtering by state,
+/// Auto-refreshes while visible. Supports filtering by state,
 /// search by name/image, and quick actions via swipe and context menu.
+///
+/// When `stackName` is provided the list is pre-filtered to containers
+/// belonging to that Compose project (via the `com.docker.compose.project` label),
+/// and the navigation title is suppressed so the parent view can own it.
 struct ContainerListView: View {
 
     let client: PortainerClient
     let environment: PortainerEndpoint
+    /// When set, only containers whose `com.docker.compose.project` label
+    /// matches this value are shown. The navigation title is also hidden
+    /// so the embedding view controls the title bar.
+    let stackName: String?
 
     @State private var viewModel: ContainerListViewModel
     @State private var isPreview = false
 
-    init(client: PortainerClient, environment: PortainerEndpoint) {
+    init(client: PortainerClient, environment: PortainerEndpoint, stackName: String? = nil) {
         self.client = client
         self.environment = environment
-        self._viewModel = State(initialValue: ContainerListViewModel())
+        self.stackName = stackName
+        self._viewModel = State(initialValue: ContainerListViewModel(stackName: stackName))
     }
 
-    init(client: PortainerClient, environment: PortainerEndpoint, previewViewModel: ContainerListViewModel) {
+    init(client: PortainerClient, environment: PortainerEndpoint, stackName: String? = nil, previewViewModel: ContainerListViewModel) {
         self.client = client
         self.environment = environment
+        self.stackName = stackName
         self._viewModel = State(initialValue: previewViewModel)
         self._isPreview = State(initialValue: true)
     }
@@ -38,9 +48,11 @@ struct ContainerListView: View {
                 list
             }
         }
-        .navigationTitle(environment.name)
+        // When embedded inside another view (e.g. StackDetailView), suppress
+        // the navigation title so the parent owns the title bar.
+        .navigationTitle(stackName == nil ? environment.name : "")
 #if os(iOS)
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(stackName == nil ? .large : .inline)
 #endif
         .toolbar { toolbarContent }
         .searchable(text: $viewModel.searchText, prompt: "Search containers")

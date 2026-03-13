@@ -2,31 +2,34 @@ import SwiftUI
 
 /// Displays full details for a single Portainer stack.
 ///
-/// Sections: Overview, Environment Variables, Compose File.
-/// Toolbar: start/stop/restart actions.
+/// Sections: Overview, Containers, Environment Variables, Compose File.
+/// Toolbar: start/stop actions.
 struct StackDetailView: View {
 
     let client: PortainerClient
     let stack: PortainerStack
-    let endpointId: Int
+    let environment: PortainerEndpoint
 
     @State private var viewModel: StackDetailViewModel
     @State private var isPreview = false
     @State private var showEnvVars = false
 
+    /// Convenience accessor so the rest of the view can use `endpointId` directly.
+    private var endpointId: Int { environment.id }
+
     // MARK: - Init
 
-    init(client: PortainerClient, stack: PortainerStack, endpointId: Int) {
+    init(client: PortainerClient, stack: PortainerStack, environment: PortainerEndpoint) {
         self.client = client
         self.stack = stack
-        self.endpointId = endpointId
+        self.environment = environment
         self._viewModel = State(initialValue: StackDetailViewModel())
     }
 
-    init(client: PortainerClient, stack: PortainerStack, endpointId: Int, previewViewModel: StackDetailViewModel) {
+    init(client: PortainerClient, stack: PortainerStack, environment: PortainerEndpoint, previewViewModel: StackDetailViewModel) {
         self.client = client
         self.stack = stack
-        self.endpointId = endpointId
+        self.environment = environment
         self._viewModel = State(initialValue: previewViewModel)
         self._isPreview = State(initialValue: true)
     }
@@ -74,6 +77,7 @@ struct StackDetailView: View {
     private func detailContent(_ detail: PortainerStack) -> some View {
         List {
             overviewSection(detail)
+            containersSection(detail)
             if !detail.env.isEmpty {
                 envSection(detail.env)
             }
@@ -111,6 +115,22 @@ struct StackDetailView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+            }
+        }
+    }
+
+    // MARK: - Containers Section
+
+    private func containersSection(_ detail: PortainerStack) -> some View {
+        Section {
+            NavigationLink {
+                ContainerListView(
+                    client: client,
+                    environment: environment,
+                    stackName: detail.name
+                )
+            } label: {
+                Label("Containers", systemImage: "shippingbox")
             }
         }
     }
@@ -276,7 +296,7 @@ private extension Optional where Wrapped == String {
         StackDetailView(
             client: PortainerClient(serverURL: URL(string: "http://localhost:9000")!),
             stack: .previewActive,
-            endpointId: 1,
+            environment: .previewMock,
             previewViewModel: StackDetailViewModel(
                 previewStack: .previewActive,
                 composeFile: .previewComposeFile
@@ -291,7 +311,7 @@ private extension Optional where Wrapped == String {
         StackDetailView(
             client: PortainerClient(serverURL: URL(string: "http://localhost:9000")!),
             stack: .previewActive,
-            endpointId: 1,
+            environment: .previewMock,
             previewViewModel: StackDetailViewModel(
                 previewStack: .previewActive,
                 composeFile: .previewComposeFile
@@ -306,7 +326,7 @@ private extension Optional where Wrapped == String {
         StackDetailView(
             client: PortainerClient(serverURL: URL(string: "http://localhost:9000")!),
             stack: .previewInactive,
-            endpointId: 1,
+            environment: .previewMock,
             previewViewModel: StackDetailViewModel(
                 previewStack: .previewInactive,
                 composeFile: nil
@@ -316,6 +336,15 @@ private extension Optional where Wrapped == String {
 }
 
 // MARK: - Preview Mock Data
+
+private extension PortainerEndpoint {
+    static let previewMock: PortainerEndpoint = {
+        let json = """
+        {"Id":1,"Name":"production","Type":1,"Status":1,"URL":"tcp://localhost:2375","PublicURL":"","Snapshots":[]}
+        """
+        return try! JSONDecoder().decode(PortainerEndpoint.self, from: Data(json.utf8))
+    }()
+}
 
 private extension PortainerStack {
     static let previewActive: PortainerStack = {
