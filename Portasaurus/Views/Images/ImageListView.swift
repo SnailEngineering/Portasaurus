@@ -11,7 +11,6 @@ struct ImageListView: View {
 
     @State private var viewModel: ImageListViewModel
     @State private var isPreview = false
-    @State private var showPruneConfirm = false
     @State private var pendingDeleteImage: DockerImage?
 
     // MARK: - Init
@@ -69,17 +68,6 @@ struct ImageListView: View {
             if let image = pendingDeleteImage {
                 Text("Permanently remove \"\(image.displayName)\"? This cannot be undone.")
             }
-        }
-        .confirmationDialog(
-            "Prune Images?",
-            isPresented: $showPruneConfirm,
-            titleVisibility: .visible
-        ) {
-            Button("Prune Dangling Images", role: .destructive) {
-                Task { await viewModel.pruneImages(client: client, endpointId: environment.id) }
-            }
-        } message: {
-            Text("Remove all dangling (unused, untagged) images. This cannot be undone.")
         }
         .alert("Action Failed", isPresented: $viewModel.actionError.isPresented) {
             Button("OK", role: .cancel) { viewModel.actionError = nil }
@@ -179,15 +167,6 @@ struct ImageListView: View {
                 }
             }
             .pickerStyle(.menu)
-        }
-
-        ToolbarItem(placement: .automatic) {
-            Button {
-                showPruneConfirm = true
-            } label: {
-                Text("Prune")
-            }
-            .disabled(viewModel.isActing || viewModel.images.isEmpty)
         }
     }
 

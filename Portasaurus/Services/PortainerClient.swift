@@ -178,7 +178,7 @@ final class PortainerClient: Sendable {
 
     /// Removes an image by ID.
     func removeImage(id: String, endpointId: Int) async throws {
-        try await requestVoid(method: .delete, path: "\(dockerBase(endpointId: endpointId))/images/\(id)?force=true")
+        try await requestVoid(method: .delete, path: "\(dockerBase(endpointId: endpointId))/images/\(id)?force=false")
     }
 
     /// Prunes dangling (unused, untagged) images and returns space reclaimed.
