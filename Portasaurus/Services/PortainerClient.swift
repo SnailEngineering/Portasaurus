@@ -191,6 +191,45 @@ final class PortainerClient: Sendable {
         try await request(method: .post, path: "\(dockerBase(endpointId: endpointId))/images/prune")
     }
 
+    // MARK: - Volumes
+
+    /// Lists all volumes in an environment.
+    func volumes(endpointId: Int) async throws -> DockerVolumeListResponse {
+        try await request(path: "\(dockerBase(endpointId: endpointId))/volumes")
+    }
+
+    /// Returns detailed info for a single volume (includes UsageData when available).
+    func volumeDetail(name: String, endpointId: Int) async throws -> DockerVolume {
+        // URL-encode the name to handle names with slashes or special characters.
+        let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name
+        return try await request(path: "\(dockerBase(endpointId: endpointId))/volumes/\(encoded)")
+    }
+
+    /// Removes a volume by name.
+    func removeVolume(name: String, endpointId: Int) async throws {
+        let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name
+        try await requestVoid(method: .delete, path: "\(dockerBase(endpointId: endpointId))/volumes/\(encoded)")
+    }
+
+    // MARK: - Networks
+
+    /// Lists all networks in an environment.
+    func networks(endpointId: Int) async throws -> [DockerNetwork] {
+        try await request(path: "\(dockerBase(endpointId: endpointId))/networks")
+    }
+
+    /// Returns detailed info for a single network (includes full Containers map).
+    func networkDetail(id: String, endpointId: Int) async throws -> DockerNetwork {
+        let encoded = id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id
+        return try await request(path: "\(dockerBase(endpointId: endpointId))/networks/\(encoded)")
+    }
+
+    /// Removes a network by ID.
+    func removeNetwork(id: String, endpointId: Int) async throws {
+        let encoded = id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id
+        try await requestVoid(method: .delete, path: "\(dockerBase(endpointId: endpointId))/networks/\(encoded)")
+    }
+
     // MARK: - Stacks
 
     /// Lists all stacks visible to the authenticated user.
@@ -223,6 +262,24 @@ final class PortainerClient: Sendable {
     /// Stops a running stack.
     func stopStack(id: Int, endpointId: Int) async throws {
         try await requestVoid(method: .post, path: "/api/stacks/\(id)/stop?endpointId=\(endpointId)")
+    }
+
+    // MARK: - Registries
+
+    /// Lists all registries configured in Portainer.
+    /// Registries are global — not scoped to a specific environment.
+    func registries() async throws -> [PortainerRegistry] {
+        try await request(path: "/api/registries")
+    }
+
+    /// Returns detailed info for a single registry.
+    func registry(id: Int) async throws -> PortainerRegistry {
+        try await request(path: "/api/registries/\(id)")
+    }
+
+    /// Permanently removes a registry from Portainer.
+    func removeRegistry(id: Int) async throws {
+        try await requestVoid(method: .delete, path: "/api/registries/\(id)")
     }
 
     // MARK: - Logs

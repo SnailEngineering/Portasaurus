@@ -110,11 +110,11 @@ struct EnvironmentSection: Hashable {
         case .images:
             ImageListView(client: client, environment: environment)
         case .volumes:
-            ComingSoonView(title: "Volumes", systemImage: "cylinder.fill")
+            VolumeListView(client: client, environment: environment)
         case .networks:
-            ComingSoonView(title: "Networks", systemImage: "network")
+            NetworkListView(client: client, environment: environment)
         case .registries:
-            ComingSoonView(title: "Registries", systemImage: "externaldrive.connected.to.line.below.fill")
+            RegistryListView(client: client)
         }
     }
 }
@@ -126,6 +126,8 @@ private struct EnvironmentCard: View {
 
     let client: PortainerClient
     let env: PortainerEndpoint
+    @State private var networkCount: Int?
+    @State private var registryCount: Int?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -142,6 +144,13 @@ private struct EnvironmentCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(borderColor, lineWidth: 1)
         )
+        .task {
+            async let networksFetch = try? client.networks(endpointId: env.id)
+            async let registriesFetch = try? client.registries()
+            let (networks, registries) = await (networksFetch, registriesFetch)
+            networkCount = networks?.count
+            registryCount = registries?.count
+        }
     }
 
     // MARK: - Header
@@ -240,13 +249,13 @@ private struct EnvironmentCard: View {
                 section: .init(environment: env, category: .networks),
                 systemImage: "network",
                 title: "Networks",
-                value: "—"
+                value: networkCount.map { "\($0)" } ?? "—"
             )
             resourceTile(
                 section: .init(environment: env, category: .registries),
                 systemImage: "externaldrive.connected.to.line.below.fill",
                 title: "Registries",
-                value: "—"
+                value: registryCount.map { "\($0)" } ?? "—"
             )
         }
         .buttonStyle(.plain)

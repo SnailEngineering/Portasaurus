@@ -13,9 +13,55 @@ Full disclaimer, yes, I am building this using various AI tools (vibe coding), b
 
 What does that mean for you? The random internet user who landed here, well, nothing right now. Once I get a functional product, I'll post it to the App Store (mainly for myself) and if you want to try it out and/or contribute. Feel free to grab a PR. Otherwise, not much. Dis for me. But thanks for reading!
 
-## Everything below here is in fact AI generated.
+## Screenshots
 
-If you continue below here, trust, but verify. Thar be dragons. I've asked AI to create a comprehensive plan for me. I plan to build this out one piece at a time and slowly, manually, review and work through the plan. But just know everything below here is AI generated, I haven't reviewed it all. It could all be lies.
+| | | |
+|---|---|---|
+| ![Environments](Screenshots/01-environments-dark.png) | ![Servers](Screenshots/02-servers-dark.png) | ![Container List](Screenshots/03-container-list-dark.png) |
+| Environments | Servers | Containers |
+| ![Container Detail](Screenshots/04-container-detail-dark.png) | ![Container Logs](Screenshots/05-container-logs-dark.png) | ![Stack List](Screenshots/06-stack-list-dark.png) |
+| Container Detail | Live Logs | Stacks |
+| ![Stack Detail](Screenshots/07-stack-detail-dark.png) | ![Image List](Screenshots/08-image-list-dark.png) | ![Image Detail](Screenshots/09-image-detail-dark.png) |
+| Stack Detail | Images | Image Detail |
+| ![Volume List](Screenshots/10-volume-list-dark.png) | ![Volume Detail](Screenshots/11-volume-detail-dark.png) | ![Network List](Screenshots/12-network-list-dark.png) |
+| Volumes | Volume Detail | Networks |
+| ![Network Detail](Screenshots/13-network-detail-dark.png) | ![Registry List](Screenshots/14-registry-list-dark.png) | ![Registry Detail](Screenshots/15-registry-detail-dark.png) |
+| Network Detail | Registries | Registry Detail |
+
+---
+
+## Features
+
+- **Server management** — Add, save, and connect to multiple Portainer CE instances with secure Keychain credential storage and self-signed cert support
+- **Environment selection** — Browse all Docker environments on a server with health status and container snapshot summaries
+- **Container management** — Full container list with state filtering, start/stop/restart/kill/remove actions, and real-time status updates
+- **Container detail** — Complete inspection view: state, configuration, environment variables, ports, mounts, networks, labels, and resource limits
+- **Live log streaming** — Real-time log tail with Docker multiplexed stream parsing, stdout/stderr filtering, timestamps, and local search
+- **Stack management** — Browse Compose stacks, view compose file YAML, start/stop stacks, and see associated containers
+- **Image management** — List images with size and creation date, delete images, prune dangling/unused images
+- **Volume management** — List volumes with driver and usage info, create new volumes, delete with in-use warnings
+- **Network management** — Browse Docker networks with subnet/gateway detail, view connected containers, delete networks
+- **Registry management** — Browse configured Portainer registries with type, URL, and authentication details
+
+---
+
+## Design Principles
+
+1. **One view at a time** — each phase is a complete, testable feature. No half-built screens.
+2. **No third-party dependencies** — use Apple frameworks exclusively (URLSession, Security, SwiftData, SwiftUI).
+3. **Models match the API** — Codable structs mirror Portainer/Docker API responses exactly. Use `CodingKeys` only when Swift naming conventions differ.
+4. **ViewModels isolate logic** — views are thin. All API calls, state management, and data transformation live in `@Observable` view models.
+5. **Credentials never touch disk unencrypted** — Keychain only. SwiftData stores server metadata (host, port, display name) but never passwords or tokens.
+6. **Progressive disclosure** — list views show essential info; detail views show everything. Don't overwhelm users on summary screens.
+7. **Platform-adaptive, not platform-specific** — one codebase with `#if os()` only where truly needed (toolbars, navigation patterns). Lean on SwiftUI's built-in adaptivity.
+
+---
+
+## Getting Started
+
+Open `Portasaurus/Portasaurus.xcodeproj` in Xcode. Connect to a Portainer CE instance and start managing your Docker environments.
+
+---
 
 ## Target
 
@@ -24,6 +70,29 @@ If you continue below here, trust, but verify. Thar be dragons. I've asked AI to
 - **Default ports**: `9443` (HTTPS, self-signed cert) or `9000` (HTTP)
 
 ---
+
+## Everything below here is in fact AI generated.
+
+If you continue below here, trust, but verify. Thar be dragons. I've asked AI to create a comprehensive plan for me. I plan to build this out one piece at a time and slowly, manually, review and work through the plan. But just know everything below here is AI generated, I haven't reviewed it all. It could all be lies.
+
+---
+
+## What's Next
+
+- [ ] Container stats & resource monitoring (CPU %, memory, network I/O)
+- [ ] Interactive shell / exec into running containers
+- [ ] Environment dashboard with aggregate counts and quick actions
+- [ ] Settings view (auto-refresh interval, log tail count, cert trust management)
+- [ ] Improved error handling with retry logic and re-auth prompts
+- [ ] macOS refinements (menu bar commands, keyboard shortcuts)
+- [ ] visionOS refinements (spatial layout, ornament controls)
+- [ ] Accessibility (VoiceOver labels, Dynamic Type, contrast)
+- [ ] Container creation wizard
+- [ ] Stack creation / YAML editor
+- [ ] Multi-server aggregate overview
+
+---
+
 
 ## Architecture Overview
 
@@ -39,332 +108,9 @@ If you continue below here, trust, but verify. Thar be dragons. I've asked AI to
 | Real-time | `URLSessionWebSocketTask` (exec, attach); chunked HTTP streaming (logs) |
 | Concurrency | Swift structured concurrency (async/await, AsyncSequence, actors) |
 
-### Project Structure (target)
-
-```
-Portasaurus/
-├── App/
-│   └── PortasaurusApp.swift
-├── Models/
-│   ├── SwiftData/
-│   │   └── SavedServer.swift              # SwiftData model for server bookmarks
-│   └── API/
-│       ├── PortainerAuth.swift            # Auth request/response types
-│       ├── PortainerEndpoint.swift         # Environment model
-│       ├── DockerContainer.swift           # Container model
-│       ├── DockerContainerDetail.swift     # Container inspect model
-│       ├── DockerImage.swift               # Image model
-│       ├── DockerVolume.swift              # Volume model
-│       ├── DockerNetwork.swift             # Network model
-│       ├── PortainerStack.swift            # Stack model
-│       └── PortainerSystemStatus.swift     # System status model
-├── Services/
-│   ├── PortainerClient.swift              # Core API client (URLSession, auth, request building)
-│   ├── KeychainService.swift              # Keychain read/write/delete for credentials
-│   └── LogStreamService.swift             # Chunked HTTP log streaming
-├── ViewModels/
-│   ├── ServerConnectionViewModel.swift
-│   ├── EnvironmentListViewModel.swift
-│   ├── ContainerListViewModel.swift
-│   ├── ContainerDetailViewModel.swift
-│   ├── ContainerLogsViewModel.swift
-│   ├── ImageListViewModel.swift
-│   ├── VolumeListViewModel.swift
-│   ├── NetworkListViewModel.swift
-│   └── StackListViewModel.swift
-├── Views/
-│   ├── ServerConnection/
-│   │   ├── ServerListView.swift           # Landing page — saved servers
-│   │   └── AddServerView.swift            # Connect to new server form
-│   ├── Environments/
-│   │   └── EnvironmentListView.swift      # List of Portainer endpoints
-│   ├── Containers/
-│   │   ├── ContainerListView.swift
-│   │   ├── ContainerDetailView.swift
-│   │   └── ContainerLogsView.swift
-│   ├── Images/
-│   │   └── ImageListView.swift
-│   ├── Volumes/
-│   │   └── VolumeListView.swift
-│   ├── Networks/
-│   │   └── NetworkListView.swift
-│   ├── Stacks/
-│   │   ├── StackListView.swift
-│   │   └── StackDetailView.swift
-│   └── Shared/
-│       ├── StatusBadge.swift              # Running/stopped/etc. indicator
-│       └── ErrorBanner.swift              # Reusable error display
-└── Utilities/
-    └── SSLTrustHandler.swift              # Custom URLSession delegate for self-signed certs
-```
-
----
-
-## Portainer CE API Reference (Key Endpoints)
-
-### Authentication
-
-| Action | Method | Path | Notes |
-|---|---|---|---|
-| Login | `POST` | `/api/auth` | Body: `{"username":"…","password":"…"}` → `{"jwt":"…"}` |
-| Current user | `GET` | `/api/users/me` | Verify token is valid |
-
-- JWT expires after **8 hours**; there is no refresh endpoint — re-authenticate on 401
-- Pass token as `Authorization: Bearer <JWT>` header
-- For WebSockets, pass as `?token=<JWT>` query parameter
-
-### System
-
-| Action | Method | Path |
-|---|---|---|
-| Status | `GET` | `/api/system/status` |
-| Version | `GET` | `/api/system/version` |
-
-### Environments (Endpoints)
-
-| Action | Method | Path |
-|---|---|---|
-| List | `GET` | `/api/endpoints` |
-| Detail | `GET` | `/api/endpoints/{id}` |
-
-Supports `start`, `limit`, `search`, `groupId`, `tagIds` query params.
-
-### Containers (Docker Proxy)
-
-All container operations are proxied through: `/api/endpoints/{envId}/docker/…`
-
-| Action | Method | Path |
-|---|---|---|
-| List | `GET` | `.../containers/json?all=true` |
-| Inspect | `GET` | `.../containers/{id}/json` |
-| Start | `POST` | `.../containers/{id}/start` |
-| Stop | `POST` | `.../containers/{id}/stop` |
-| Restart | `POST` | `.../containers/{id}/restart` |
-| Kill | `POST` | `.../containers/{id}/kill` |
-| Remove | `DELETE` | `.../containers/{id}?force=true&v=true` |
-| Logs | `GET` | `.../containers/{id}/logs?stdout=1&stderr=1&timestamps=1&tail=100` |
-| Logs (stream) | `GET` | `.../containers/{id}/logs?stdout=1&stderr=1&follow=1&tail=100` |
-| Stats (snapshot) | `GET` | `.../containers/{id}/stats?stream=false` |
-| Rename | `POST` | `.../containers/{id}/rename?name=newname` |
-| Pause | `POST` | `.../containers/{id}/pause` |
-| Unpause | `POST` | `.../containers/{id}/unpause` |
-
-### Images (Docker Proxy)
-
-| Action | Method | Path |
-|---|---|---|
-| List | `GET` | `.../images/json` |
-| Inspect | `GET` | `.../images/{id}/json` |
-| Remove | `DELETE` | `.../images/{id}?force=true` |
-| Pull | `POST` | `.../images/create?fromImage=nginx&tag=latest` |
-| Prune | `POST` | `.../images/prune` |
-
-### Volumes (Docker Proxy)
-
-| Action | Method | Path |
-|---|---|---|
-| List | `GET` | `.../volumes` |
-| Inspect | `GET` | `.../volumes/{name}` |
-| Create | `POST` | `.../volumes/create` |
-| Remove | `DELETE` | `.../volumes/{name}` |
-
-### Networks (Docker Proxy)
-
-| Action | Method | Path |
-|---|---|---|
-| List | `GET` | `.../networks` |
-| Inspect | `GET` | `.../networks/{id}` |
-| Create | `POST` | `.../networks/create` |
-| Remove | `DELETE` | `.../networks/{id}` |
-
-### Stacks (Portainer Native)
-
-| Action | Method | Path |
-|---|---|---|
-| List | `GET` | `/api/stacks` |
-| Inspect | `GET` | `/api/stacks/{id}` |
-| Get compose file | `GET` | `/api/stacks/{id}/file` |
-| Start | `POST` | `/api/stacks/{id}/start` |
-| Stop | `POST` | `/api/stacks/{id}/stop` |
-| Delete | `DELETE` | `/api/stacks/{id}?endpointId={envId}` |
-| Update | `PUT` | `/api/stacks/{id}?endpointId={envId}` |
-
-### WebSocket
-
-| Action | Path |
-|---|---|
-| Exec | `ws://…/api/websocket/exec?endpointId={id}&token={jwt}&id={execId}` |
-| Attach | `ws://…/api/websocket/attach?endpointId={id}&token={jwt}` |
-
-Exec flow: create exec instance via Docker proxy → connect WebSocket with returned exec ID.
-
----
-
 ## Build Plan — Ordered Checklist
 
 Each phase is designed to be self-contained. Complete one before starting the next. Every phase produces a working, testable feature.
-
-### Phase 1: Foundation & Server Connection
-
-The landing experience. Users can add, save, and connect to Portainer servers.
-
-- [x] **1.1** Set up multi-platform target configuration (iOS, macOS, visionOS) in Xcode project
-- [x] **1.2** Create `PortainerClient` — core networking layer
-  - `URLSession`-based with async/await
-  - Base URL construction from server host/port/scheme
-  - Generic `request<T: Decodable>()` method with JSON encoding/decoding
-  - Automatic `Authorization: Bearer` header injection
-  - 401 response interception for re-authentication flow
-- [x] **1.3** Create `KeychainService` — credential storage
-  - Save credentials keyed by server URL
-  - Read credentials for a given server
-  - Delete credentials
-  - Uses Security framework directly (no third-party dependencies)
-- [x] **1.4** Create `SavedServer` SwiftData model
-  - Properties: `id` (UUID), `name` (display label), `host`, `port`, `usesHTTPS`, `username`, `dateAdded`, `lastConnected`
-  - Credentials stored in Keychain (not in SwiftData)
-- [x] **1.5** Implement authentication — `POST /api/auth`
-  - `AuthRequest` / `AuthResponse` Codable types
-  - Token stored in memory on `PortainerClient` (not persisted — re-auth on app launch)
-  - Validate connection with `GET /api/system/status` after login
-- [x] **1.6** Build `ServerListView` — landing page
-  - List of saved servers (from SwiftData) showing name, host, last connected date
-  - "Add Server" button
-  - Swipe-to-delete to remove saved servers (with Keychain cleanup)
-  - Tap to connect → authenticate → navigate into the app
-  - Connection status indicator (connecting, failed, success)
-- [x] **1.7** Build `AddServerView` — new server form
-  - Fields: display name, host/IP, port (default 9443), HTTPS toggle, username, password
-  - "Test Connection" button — attempts `POST /api/auth` + `GET /api/system/status`
-  - "Save & Connect" — saves to SwiftData + Keychain, then navigates in
-  - Input validation (non-empty host, valid port range, etc.)
-  - Option to trust self-signed certificates for this server
-
-### Phase 2: Environment (Endpoint) Selection
-
-After connecting, the user picks which Docker environment to manage.
-
-- [x] **2.1** Create `PortainerEndpoint` Codable model (id, name, type, status, URL, publicURL, snapshots)
-- [x] **2.2** Implement `GET /api/endpoints` on `PortainerClient`
-- [x] **2.3** Build `EnvironmentListView`
-  - List of environments with name, type badge (Docker, Swarm, Kubernetes), status indicator
-  - Pull-to-refresh
-  - Search/filter
-  - Tap to select → navigate to container list
-  - Show snapshot summary (containers running, stopped, healthy counts) if snapshot data available
-
-### Phase 3: Container List & Actions
-
-The primary operational view. See all containers and perform quick actions.
-
-- [x] **3.1** Create `DockerContainer` Codable model (id, names, image, state, status, ports, created, labels)
-- [x] **3.2** Implement container list endpoint on `PortainerClient` — `GET .../containers/json?all=true`
-- [x] **3.3** Build `ContainerListView`
-  - List showing container name, image, state (with color-coded `StatusBadge`)
-  - Filter by state: all, running, stopped, paused
-  - Search by name
-  - Pull-to-refresh
-  - Auto-refresh on a timer (configurable, default 10s)
-- [x] **3.4** Add container quick actions (swipe actions or context menu)
-  - Start / Stop / Restart
-  - Confirmation for destructive actions (kill, remove)
-  - Visual feedback during action (loading state)
-- [x] **3.5** Create `StatusBadge` shared component
-  - Color-coded pill: green (running), red (exited), yellow (paused), gray (created/dead)
-
-### Phase 4: Container Detail & Inspection
-
-Drill into a single container to see its full configuration.
-
-- [x] **4.1** Create `DockerContainerDetail` Codable model (full inspect response — config, network settings, mounts, state)
-- [x] **4.2** Implement container inspect endpoint — `GET .../containers/{id}/json`
-- [x] **4.3** Build `ContainerDetailView`
-  - Sections:
-    - **Status** — state, started at, finished at, restart count, health status
-    - **Configuration** — image, command, entrypoint, working dir, user
-    - **Environment variables** — list of key=value pairs
-    - **Ports** — host port → container port mappings
-    - **Mounts/Volumes** — source → destination, type, read/write
-    - **Network** — connected networks, IP addresses, MAC addresses
-    - **Labels** — key-value list
-    - **Resource limits** — memory, CPU (if set)
-  - Action buttons in toolbar: start/stop/restart, view logs
-  - Pull-to-refresh
-
-### Phase 5: Container Logs
-
-View and stream container logs in real-time.
-
-- [x] **5.1** Implement container logs endpoint — `GET .../containers/{id}/logs`
-  - Support query params: `stdout`, `stderr`, `timestamps`, `tail`, `since`, `follow`
-- [x] **5.2** Create `LogStreamService`
-  - Uses `URLSession` bytes streaming for `follow=true`
-  - Parses Docker multiplexed stream format (8-byte header: stream type + length)
-  - Delivers log lines as an `AsyncSequence`
-- [x] **5.3** Build `ContainerLogsView`
-  - Scrollable log output with monospace font
-  - Auto-scroll to bottom (with manual scroll override)
-  - Toggle: follow/pause live streaming
-  - Controls: stdout/stderr filter, tail line count, timestamps toggle
-  - Search within logs (local text search)
-  - Copy log content to clipboard
-  - Platform-appropriate display (larger text area on macOS/visionOS)
-
-### Phase 6: Stack Management
-
-View and control Docker Compose stacks.
-
-- [x] **6.1** Create `PortainerStack` Codable model (id, name, type, status, endpointId, env, creationDate)
-- [x] **6.2** Implement stack endpoints on `PortainerClient`
-  - List: `GET /api/stacks`
-  - Detail: `GET /api/stacks/{id}`
-  - Compose file: `GET /api/stacks/{id}/file`
-  - Start: `POST /api/stacks/{id}/start`
-  - Stop: `POST /api/stacks/{id}/stop`
-- [x] **6.3** Build `StackListView`
-  - List showing stack name, status, number of containers (from related containers)
-  - Start/stop actions via swipe or context menu
-  - Filter by status (active/inactive)
-- [x] **6.4** Build `StackDetailView`
-  - Stack metadata (name, type, creation date, environment variables)
-  - Compose file viewer with syntax-highlighted YAML (read-only initially)
-  - List of containers belonging to this stack (reuse `ContainerListView` with filter)
-  - Start/stop/restart actions in toolbar
-
-### Phase 7: Image Management
-
-Browse and manage Docker images on each environment.
-
-- [x] **7.1** Create `DockerImage` Codable model (id, repoTags, repoDigests, size, created, containers)
-- [x] **7.2** Implement image endpoints on `PortainerClient`
-  - List: `GET .../images/json`
-  - Remove: `DELETE .../images/{id}`
-  - Prune: `POST .../images/prune`
-- [x] **7.3** Build `ImageListView`
-  - List showing image tag(s), size (human-readable), created date
-  - Search/filter by name
-  - Delete image (with confirmation)
-  - Prune unused images (with confirmation showing space to be reclaimed)
-  - Badge for "in use" vs "dangling"
-
-### Phase 8: Volume Management
-
-- [ ] **8.1** Create `DockerVolume` Codable model (name, driver, mountpoint, labels, scope, createdAt, usageData)
-- [ ] **8.2** Implement volume endpoints on `PortainerClient`
-- [ ] **8.3** Build `VolumeListView`
-  - List showing volume name, driver, size (if available)
-  - Create new volume (name, driver, labels)
-  - Delete volume (with confirmation, warn if in use)
-  - "In use" indicator based on container mount data
-
-### Phase 9: Network Management
-
-- [ ] **9.1** Create `DockerNetwork` Codable model (id, name, driver, scope, internal, attachable, containers)
-- [ ] **9.2** Implement network endpoints on `PortainerClient`
-- [ ] **9.3** Build `NetworkListView`
-  - List showing network name, driver, scope (local/swarm)
-  - Expandable detail: subnet, gateway, connected containers
-  - Delete network (with confirmation, prevent deletion of default networks)
 
 ### Phase 10: Container Stats & Resource Monitoring
 
@@ -435,23 +181,3 @@ These are stretch goals for after the core app is solid.
 - [ ] **14.6** Widgets (iOS/macOS) showing container status summary
 - [ ] **14.7** Shortcuts/Siri integration ("How many containers are running?")
 - [ ] **14.8** Import/export server configurations (for sharing between devices)
-
----
-
-## Design Principles
-
-1. **One view at a time** — each phase is a complete, testable feature. No half-built screens.
-2. **No third-party dependencies** — use Apple frameworks exclusively (URLSession, Security, SwiftData, SwiftUI).
-3. **Models match the API** — Codable structs mirror Portainer/Docker API responses exactly. Use `CodingKeys` only when Swift naming conventions differ.
-4. **ViewModels isolate logic** — views are thin. All API calls, state management, and data transformation live in `@Observable` view models.
-5. **Credentials never touch disk unencrypted** — Keychain only. SwiftData stores server metadata (host, port, display name) but never passwords or tokens.
-6. **Progressive disclosure** — list views show essential info; detail views show everything. Don't overwhelm users on summary screens.
-7. **Platform-adaptive, not platform-specific** — one codebase with `#if os()` only where truly needed (toolbars, navigation patterns). Lean on SwiftUI's built-in adaptivity.
-
----
-
-## Getting Started
-
-Open `Portasaurus/Portasaurus.xcodeproj` in Xcode. The project currently contains the default SwiftData template and is ready to be built out starting with **Phase 1**.
-
-Begin with Phase 1.1 — verify multi-platform targets are configured, then proceed to building `PortainerClient` and `KeychainService` before any views.
