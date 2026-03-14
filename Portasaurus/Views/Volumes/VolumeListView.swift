@@ -50,6 +50,9 @@ struct VolumeListView: View {
         .toolbar { toolbarContent }
         .searchable(text: $viewModel.searchText, prompt: "Search volumes")
         .refreshable { await viewModel.load(client: client, endpointId: environment.id) }
+        .navigationDestination(for: DockerVolume.self) { volume in
+            VolumeDetailView(client: client, volume: volume, endpointId: environment.id)
+        }
         .task {
             guard !isPreview else { return }
             await viewModel.load(client: client, endpointId: environment.id)
@@ -91,8 +94,10 @@ struct VolumeListView: View {
 
     private var list: some View {
         List(viewModel.filtered) { volume in
-            volumeRow(volume)
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            NavigationLink(value: volume) {
+                volumeRow(volume)
+            }
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button(role: .destructive) {
                         pendingDeleteVolume = volume
                     } label: {
