@@ -240,7 +240,7 @@ private struct EnvironmentCard: View {
                 section: .init(environment: env, category: .networks),
                 systemImage: "network",
                 title: "Networks",
-                value: "—"
+                value: "\(snap.networkCount)"
             )
             resourceTile(
                 section: .init(environment: env, category: .registries),
@@ -366,16 +366,18 @@ private extension PortainerEndpoint {
             var id: Int; var name: String; var type: Int; var status: Int
             var running: Int; var stopped: Int; var unhealthy: Int
             var volumes: Int; var images: Int; var stacks: Int
-            var cpu: Int; var memoryGB: Double
+            var networks: Int; var cpu: Int; var memoryGB: Double
         }
         let items: [MockEnv] = [
-            MockEnv(id: 1, name: "production",  type: 1, status: 1, running: 12, stopped: 2, unhealthy: 1, volumes: 23, images: 39, stacks: 8,  cpu: 12, memoryGB: 23.6),
-            MockEnv(id: 2, name: "staging",     type: 1, status: 1, running:  5, stopped: 3, unhealthy: 0, volumes:  8, images: 15, stacks: 3,  cpu:  4, memoryGB:  7.8),
-            MockEnv(id: 3, name: "dev-cluster", type: 2, status: 1, running:  8, stopped: 1, unhealthy: 0, volumes:  5, images: 12, stacks: 2,  cpu:  8, memoryGB: 16.0),
-            MockEnv(id: 4, name: "edge-node-1", type: 4, status: 2, running:  0, stopped: 0, unhealthy: 0, volumes:  0, images:  0, stacks: 0,  cpu:  2, memoryGB:  2.0),
+            MockEnv(id: 1, name: "production",  type: 1, status: 1, running: 12, stopped: 2, unhealthy: 1, volumes: 23, images: 39, stacks: 8,  networks: 7,  cpu: 12, memoryGB: 23.6),
+            MockEnv(id: 2, name: "staging",     type: 1, status: 1, running:  5, stopped: 3, unhealthy: 0, volumes:  8, images: 15, stacks: 3,  networks: 4,  cpu:  4, memoryGB:  7.8),
+            MockEnv(id: 3, name: "dev-cluster", type: 2, status: 1, running:  8, stopped: 1, unhealthy: 0, volumes:  5, images: 12, stacks: 2,  networks: 5,  cpu:  8, memoryGB: 16.0),
+            MockEnv(id: 4, name: "edge-node-1", type: 4, status: 2, running:  0, stopped: 0, unhealthy: 0, volumes:  0, images:  0, stacks: 0,  networks: 3,  cpu:  2, memoryGB:  2.0),
         ]
         let memBytes = { (gb: Double) in Int64(gb * 1_073_741_824) }
+        // Build a minimal DockerSnapshotRaw.Networks array with `networks` placeholder objects.
         return items.map { item in
+            let networkObjects = (0..<item.networks).map { _ in "{}" }.joined(separator: ",")
             let json = """
             {
               "Id": \(item.id),
@@ -395,7 +397,8 @@ private extension PortainerEndpoint {
                 "TotalCPU": \(item.cpu),
                 "TotalMemory": \(memBytes(item.memoryGB)),
                 "DockerVersion": "24.0.7",
-                "Time": \(Int(Date().timeIntervalSince1970))
+                "Time": \(Int(Date().timeIntervalSince1970)),
+                "DockerSnapshotRaw": { "Networks": [\(networkObjects)] }
               }]
             }
             """
