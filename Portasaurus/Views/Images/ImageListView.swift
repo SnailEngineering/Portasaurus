@@ -50,6 +50,9 @@ struct ImageListView: View {
         .toolbar { toolbarContent }
         .searchable(text: $viewModel.searchText, prompt: "Search images")
         .refreshable { await viewModel.load(client: client, endpointId: environment.id) }
+        .navigationDestination(for: DockerImage.self) { image in
+            ImageDetailView(client: client, image: image, endpointId: environment.id)
+        }
         .task {
             guard !isPreview else { return }
             await viewModel.load(client: client, endpointId: environment.id)
@@ -80,8 +83,10 @@ struct ImageListView: View {
 
     private var list: some View {
         List(viewModel.filtered) { image in
-            imageRow(image)
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            NavigationLink(value: image) {
+                imageRow(image)
+            }
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button(role: .destructive) {
                         pendingDeleteImage = image
                     } label: {

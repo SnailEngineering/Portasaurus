@@ -335,12 +335,12 @@ View and control Docker Compose stacks.
 
 Browse and manage Docker images on each environment.
 
-- [ ] **7.1** Create `DockerImage` Codable model (id, repoTags, repoDigests, size, created, containers)
-- [ ] **7.2** Implement image endpoints on `PortainerClient`
+- [x] **7.1** Create `DockerImage` Codable model (id, repoTags, repoDigests, size, created, containers)
+- [x] **7.2** Implement image endpoints on `PortainerClient`
   - List: `GET .../images/json`
   - Remove: `DELETE .../images/{id}`
   - Prune: `POST .../images/prune`
-- [ ] **7.3** Build `ImageListView`
+- [x] **7.3** Build `ImageListView`
   - List showing image tag(s), size (human-readable), created date
   - Search/filter by name
   - Delete image (with confirmation)
