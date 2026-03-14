@@ -110,7 +110,7 @@ struct EnvironmentSection: Hashable {
         case .images:
             ImageListView(client: client, environment: environment)
         case .volumes:
-            ComingSoonView(title: "Volumes", systemImage: "cylinder.fill")
+            VolumeListView(client: client, environment: environment)
         case .networks:
             ComingSoonView(title: "Networks", systemImage: "network")
         case .registries:

@@ -191,6 +191,26 @@ final class PortainerClient: Sendable {
         try await request(method: .post, path: "\(dockerBase(endpointId: endpointId))/images/prune")
     }
 
+    // MARK: - Volumes
+
+    /// Lists all volumes in an environment.
+    func volumes(endpointId: Int) async throws -> DockerVolumeListResponse {
+        try await request(path: "\(dockerBase(endpointId: endpointId))/volumes")
+    }
+
+    /// Returns detailed info for a single volume (includes UsageData when available).
+    func volumeDetail(name: String, endpointId: Int) async throws -> DockerVolume {
+        // URL-encode the name to handle names with slashes or special characters.
+        let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name
+        return try await request(path: "\(dockerBase(endpointId: endpointId))/volumes/\(encoded)")
+    }
+
+    /// Removes a volume by name.
+    func removeVolume(name: String, endpointId: Int) async throws {
+        let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name
+        try await requestVoid(method: .delete, path: "\(dockerBase(endpointId: endpointId))/volumes/\(encoded)")
+    }
+
     // MARK: - Stacks
 
     /// Lists all stacks visible to the authenticated user.
