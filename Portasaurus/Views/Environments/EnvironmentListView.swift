@@ -112,7 +112,7 @@ struct EnvironmentSection: Hashable {
         case .volumes:
             VolumeListView(client: client, environment: environment)
         case .networks:
-            ComingSoonView(title: "Networks", systemImage: "network")
+            NetworkListView(client: client, environment: environment)
         case .registries:
             ComingSoonView(title: "Registries", systemImage: "externaldrive.connected.to.line.below.fill")
         }

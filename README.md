@@ -349,9 +349,9 @@ Browse and manage Docker images on each environment.
 
 ### Phase 8: Volume Management
 
-- [ ] **8.1** Create `DockerVolume` Codable model (name, driver, mountpoint, labels, scope, createdAt, usageData)
-- [ ] **8.2** Implement volume endpoints on `PortainerClient`
-- [ ] **8.3** Build `VolumeListView`
+- [x] **8.1** Create `DockerVolume` Codable model (name, driver, mountpoint, labels, scope, createdAt, usageData)
+- [x] **8.2** Implement volume endpoints on `PortainerClient`
+- [x] **8.3** Build `VolumeListView`
   - List showing volume name, driver, size (if available)
   - Create new volume (name, driver, labels)
   - Delete volume (with confirmation, warn if in use)
@@ -359,12 +359,13 @@ Browse and manage Docker images on each environment.
 
 ### Phase 9: Network Management
 
-- [ ] **9.1** Create `DockerNetwork` Codable model (id, name, driver, scope, internal, attachable, containers)
-- [ ] **9.2** Implement network endpoints on `PortainerClient`
-- [ ] **9.3** Build `NetworkListView`
+- [x] **9.1** Create `DockerNetwork` Codable model (id, name, driver, scope, internal, attachable, containers)
+- [x] **9.2** Implement network endpoints on `PortainerClient`
+- [x] **9.3** Build `NetworkListView`
   - List showing network name, driver, scope (local/swarm)
   - Expandable detail: subnet, gateway, connected containers
   - Delete network (with confirmation, prevent deletion of default networks)
+- [x] **9.4** Build `NetworkDetailView`
 
 ### Phase 10: Container Stats & Resource Monitoring
 

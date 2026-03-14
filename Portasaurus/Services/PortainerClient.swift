@@ -211,6 +211,25 @@ final class PortainerClient: Sendable {
         try await requestVoid(method: .delete, path: "\(dockerBase(endpointId: endpointId))/volumes/\(encoded)")
     }
 
+    // MARK: - Networks
+
+    /// Lists all networks in an environment.
+    func networks(endpointId: Int) async throws -> [DockerNetwork] {
+        try await request(path: "\(dockerBase(endpointId: endpointId))/networks")
+    }
+
+    /// Returns detailed info for a single network (includes full Containers map).
+    func networkDetail(id: String, endpointId: Int) async throws -> DockerNetwork {
+        let encoded = id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id
+        return try await request(path: "\(dockerBase(endpointId: endpointId))/networks/\(encoded)")
+    }
+
+    /// Removes a network by ID.
+    func removeNetwork(id: String, endpointId: Int) async throws {
+        let encoded = id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id
+        try await requestVoid(method: .delete, path: "\(dockerBase(endpointId: endpointId))/networks/\(encoded)")
+    }
+
     // MARK: - Stacks
 
     /// Lists all stacks visible to the authenticated user.
