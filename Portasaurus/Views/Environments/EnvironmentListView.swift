@@ -106,9 +106,9 @@ struct EnvironmentSection: Hashable {
         case .containers:
             ContainerListView(client: client, environment: environment)
         case .stacks:
-            ComingSoonView(title: "Stacks", systemImage: "square.stack.3d.up.fill")
+            StackListView(client: client, environment: environment)
         case .images:
-            ComingSoonView(title: "Images", systemImage: "photo.stack.fill")
+            ImageListView(client: client, environment: environment)
         case .volumes:
             ComingSoonView(title: "Volumes", systemImage: "cylinder.fill")
         case .networks:

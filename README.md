@@ -295,13 +295,13 @@ Drill into a single container to see its full configuration.
 
 View and stream container logs in real-time.
 
-- [ ] **5.1** Implement container logs endpoint — `GET .../containers/{id}/logs`
+- [x] **5.1** Implement container logs endpoint — `GET .../containers/{id}/logs`
   - Support query params: `stdout`, `stderr`, `timestamps`, `tail`, `since`, `follow`
-- [ ] **5.2** Create `LogStreamService`
+- [x] **5.2** Create `LogStreamService`
   - Uses `URLSession` bytes streaming for `follow=true`
   - Parses Docker multiplexed stream format (8-byte header: stream type + length)
   - Delivers log lines as an `AsyncSequence`
-- [ ] **5.3** Build `ContainerLogsView`
+- [x] **5.3** Build `ContainerLogsView`
   - Scrollable log output with monospace font
   - Auto-scroll to bottom (with manual scroll override)
   - Toggle: follow/pause live streaming
@@ -314,18 +314,18 @@ View and stream container logs in real-time.
 
 View and control Docker Compose stacks.
 
-- [ ] **6.1** Create `PortainerStack` Codable model (id, name, type, status, endpointId, env, creationDate)
-- [ ] **6.2** Implement stack endpoints on `PortainerClient`
+- [x] **6.1** Create `PortainerStack` Codable model (id, name, type, status, endpointId, env, creationDate)
+- [x] **6.2** Implement stack endpoints on `PortainerClient`
   - List: `GET /api/stacks`
   - Detail: `GET /api/stacks/{id}`
   - Compose file: `GET /api/stacks/{id}/file`
   - Start: `POST /api/stacks/{id}/start`
   - Stop: `POST /api/stacks/{id}/stop`
-- [ ] **6.3** Build `StackListView`
+- [x] **6.3** Build `StackListView`
   - List showing stack name, status, number of containers (from related containers)
   - Start/stop actions via swipe or context menu
   - Filter by status (active/inactive)
-- [ ] **6.4** Build `StackDetailView`
+- [x] **6.4** Build `StackDetailView`
   - Stack metadata (name, type, creation date, environment variables)
   - Compose file viewer with syntax-highlighted YAML (read-only initially)
   - List of containers belonging to this stack (reuse `ContainerListView` with filter)
@@ -335,12 +335,12 @@ View and control Docker Compose stacks.
 
 Browse and manage Docker images on each environment.
 
-- [ ] **7.1** Create `DockerImage` Codable model (id, repoTags, repoDigests, size, created, containers)
-- [ ] **7.2** Implement image endpoints on `PortainerClient`
+- [x] **7.1** Create `DockerImage` Codable model (id, repoTags, repoDigests, size, created, containers)
+- [x] **7.2** Implement image endpoints on `PortainerClient`
   - List: `GET .../images/json`
   - Remove: `DELETE .../images/{id}`
   - Prune: `POST .../images/prune`
-- [ ] **7.3** Build `ImageListView`
+- [x] **7.3** Build `ImageListView`
   - List showing image tag(s), size (human-readable), created date
   - Search/filter by name
   - Delete image (with confirmation)

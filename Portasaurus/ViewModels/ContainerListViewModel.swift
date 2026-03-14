@@ -18,10 +18,17 @@ final class ContainerListViewModel {
 
     // MARK: - Init
 
-    init() {}
+    /// Optional stack name filter. When set, only containers whose
+    /// `com.docker.compose.project` label matches this value are shown.
+    let stackName: String?
+
+    init(stackName: String? = nil) {
+        self.stackName = stackName
+    }
 
     /// Preview-only initializer that pre-loads containers without a network call.
-    init(previewContainers: [DockerContainer]) {
+    init(previewContainers: [DockerContainer], stackName: String? = nil) {
+        self.stackName = stackName
         containers = previewContainers
     }
 
@@ -51,7 +58,12 @@ final class ContainerListViewModel {
                 || container.displayName.localizedCaseInsensitiveContains(searchText)
                 || container.image.localizedCaseInsensitiveContains(searchText)
 
-            return matchesState && matchesSearch
+            let matchesStack: Bool = {
+                guard let stackName else { return true }
+                return container.labels["com.docker.compose.project"] == stackName
+            }()
+
+            return matchesState && matchesSearch && matchesStack
         }
         .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
     }
