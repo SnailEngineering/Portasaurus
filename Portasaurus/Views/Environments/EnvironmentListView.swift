@@ -12,8 +12,6 @@ struct EnvironmentListView: View {
 
     @State private var viewModel: EnvironmentListViewModel
     @State private var isPreview = false
-    /// Live network counts keyed by environment ID, populated when the user visits NetworkListView.
-    @State private var networkCounts: [Int: Int] = [:]
 
     init(client: PortainerClient, serverName: String) {
         self.client = client
@@ -52,12 +50,7 @@ struct EnvironmentListView: View {
             await viewModel.load(from: client)
         }
         .navigationDestination(for: EnvironmentSection.self) { destination in
-            let envId = destination.environment.id
-            let binding = Binding(
-                get: { networkCounts[envId] ?? 0 },
-                set: { networkCounts[envId] = $0 }
-            )
-            destination.view(client: client, networkCount: binding)
+            destination.view(client: client)
         }
     }
 
@@ -67,7 +60,7 @@ struct EnvironmentListView: View {
         ScrollView {
             LazyVStack(spacing: 16) {
                 ForEach(viewModel.filtered) { env in
-                    EnvironmentCard(client: client, env: env, networkCount: networkCounts[env.id])
+                    EnvironmentCard(client: client, env: env)
                 }
             }
             .padding()
@@ -108,7 +101,7 @@ struct EnvironmentSection: Hashable {
     let category: Category
 
     @ViewBuilder
-    func view(client: PortainerClient, networkCount: Binding<Int>? = nil) -> some View {
+    func view(client: PortainerClient) -> some View {
         switch category {
         case .containers:
             ContainerListView(client: client, environment: environment)
@@ -119,9 +112,9 @@ struct EnvironmentSection: Hashable {
         case .volumes:
             VolumeListView(client: client, environment: environment)
         case .networks:
-            NetworkListView(client: client, environment: environment, networkCount: networkCount)
+            NetworkListView(client: client, environment: environment)
         case .registries:
-            ComingSoonView(title: "Registries", systemImage: "externaldrive.connected.to.line.below.fill")
+            RegistryListView(client: client)
         }
     }
 }
@@ -133,8 +126,8 @@ private struct EnvironmentCard: View {
 
     let client: PortainerClient
     let env: PortainerEndpoint
-    /// Live network count, populated the first time the user visits NetworkListView.
-    let networkCount: Int?
+    @State private var networkCount: Int?
+    @State private var registryCount: Int?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -151,6 +144,13 @@ private struct EnvironmentCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(borderColor, lineWidth: 1)
         )
+        .task {
+            async let networksFetch = try? client.networks(endpointId: env.id)
+            async let registriesFetch = try? client.registries()
+            let (networks, registries) = await (networksFetch, registriesFetch)
+            networkCount = networks?.count
+            registryCount = registries?.count
+        }
     }
 
     // MARK: - Header
@@ -255,7 +255,7 @@ private struct EnvironmentCard: View {
                 section: .init(environment: env, category: .registries),
                 systemImage: "externaldrive.connected.to.line.below.fill",
                 title: "Registries",
-                value: "—"
+                value: registryCount.map { "\($0)" } ?? "—"
             )
         }
         .buttonStyle(.plain)

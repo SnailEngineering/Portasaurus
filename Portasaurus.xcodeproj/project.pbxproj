@@ -27,8 +27,6 @@
 		0785E2BD2F6464BF00D78F62 /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
 		0785E2BE2F6464BF00D78F62 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		0785E2BF2F6464BF00D78F62 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
-		0785E3622F65342B00D78F62 /* temp-network-list.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "temp-network-list.html"; sourceTree = "<group>"; };
-		0785E3632F65343500D78F62 /* temp-network-detail.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "temp-network-detail.html"; sourceTree = "<group>"; };
 		07CE608C2F60BA09005CA102 /* Portasaurus.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Portasaurus.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		07CE609B2F60BA0A005CA102 /* PortasaurusTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PortasaurusTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		07CE60A52F60BA0A005CA102 /* PortasaurusUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PortasaurusUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -75,8 +73,6 @@
 		07CE60832F60BA09005CA102 = {
 			isa = PBXGroup;
 			children = (
-				0785E3632F65343500D78F62 /* temp-network-detail.html */,
-				0785E3622F65342B00D78F62 /* temp-network-list.html */,
 				0785E2BD2F6464BF00D78F62 /* CLAUDE.md */,
 				0785E2BE2F6464BF00D78F62 /* LICENSE */,
 				0785E2BF2F6464BF00D78F62 /* README.md */,

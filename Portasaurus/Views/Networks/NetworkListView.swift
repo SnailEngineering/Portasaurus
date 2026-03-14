@@ -8,9 +8,6 @@ struct NetworkListView: View {
 
     let client: PortainerClient
     let environment: PortainerEndpoint
-    /// Written with the total network count once networks are loaded.
-    /// Allows the caller (e.g. environment card) to display a live count.
-    var networkCount: Binding<Int>?
 
     @State private var viewModel: NetworkListViewModel
     @State private var isPreview = false
@@ -18,17 +15,15 @@ struct NetworkListView: View {
 
     // MARK: - Init
 
-    init(client: PortainerClient, environment: PortainerEndpoint, networkCount: Binding<Int>? = nil) {
+    init(client: PortainerClient, environment: PortainerEndpoint) {
         self.client = client
         self.environment = environment
-        self.networkCount = networkCount
         self._viewModel = State(initialValue: NetworkListViewModel())
     }
 
     init(client: PortainerClient, environment: PortainerEndpoint, previewViewModel: NetworkListViewModel) {
         self.client = client
         self.environment = environment
-        self.networkCount = nil
         self._viewModel = State(initialValue: previewViewModel)
         self._isPreview = State(initialValue: true)
     }
@@ -56,7 +51,6 @@ struct NetworkListView: View {
         .searchable(text: $viewModel.searchText, prompt: "Search networks")
         .refreshable {
             await viewModel.load(client: client, endpointId: environment.id)
-            networkCount?.wrappedValue = viewModel.networks.count
         }
         .navigationDestination(for: DockerNetwork.self) { network in
             NetworkDetailView(client: client, network: network, endpointId: environment.id)
@@ -64,7 +58,6 @@ struct NetworkListView: View {
         .task {
             guard !isPreview else { return }
             await viewModel.load(client: client, endpointId: environment.id)
-            networkCount?.wrappedValue = viewModel.networks.count
         }
         .confirmationDialog(
             deleteDialogTitle,

@@ -264,6 +264,24 @@ final class PortainerClient: Sendable {
         try await requestVoid(method: .post, path: "/api/stacks/\(id)/stop?endpointId=\(endpointId)")
     }
 
+    // MARK: - Registries
+
+    /// Lists all registries configured in Portainer.
+    /// Registries are global — not scoped to a specific environment.
+    func registries() async throws -> [PortainerRegistry] {
+        try await request(path: "/api/registries")
+    }
+
+    /// Returns detailed info for a single registry.
+    func registry(id: Int) async throws -> PortainerRegistry {
+        try await request(path: "/api/registries/\(id)")
+    }
+
+    /// Permanently removes a registry from Portainer.
+    func removeRegistry(id: Int) async throws {
+        try await requestVoid(method: .delete, path: "/api/registries/\(id)")
+    }
+
     // MARK: - Logs
 
     /// Fetches a snapshot of container logs (non-streaming).
