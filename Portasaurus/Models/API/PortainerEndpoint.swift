@@ -84,9 +84,6 @@ struct PortainerEndpoint: Decodable, Identifiable, Hashable, Sendable {
         let totalMemory:             Int64
         let dockerVersion:           String?
         let time:                    Int64?
-        /// Network count derived from the raw snapshot Networks array.
-        /// The top-level snapshot summary has no dedicated NetworkCount field.
-        let networkCount:            Int
 
         enum CodingKeys: String, CodingKey {
             case runningContainerCount   = "RunningContainerCount"
@@ -100,37 +97,6 @@ struct PortainerEndpoint: Decodable, Identifiable, Hashable, Sendable {
             case totalMemory             = "TotalMemory"
             case dockerVersion           = "DockerVersion"
             case time                    = "Time"
-            case rawSnapshot             = "DockerSnapshotRaw"
-        }
-
-        /// Minimal decode of the raw snapshot block — only the Networks count is needed.
-        private struct RawSnapshot: Decodable, Sendable {
-            let networkCount: Int
-            private enum RawKeys: String, CodingKey { case networks = "Networks" }
-            // Each network object can have arbitrary fields; we only need the array length.
-            private struct AnyNetwork: Decodable, Sendable {}
-            nonisolated init(from decoder: any Decoder) throws {
-                let c = try decoder.container(keyedBy: RawKeys.self)
-                let networks = try c.decodeIfPresent([AnyNetwork].self, forKey: .networks) ?? []
-                networkCount = networks.count
-            }
-        }
-
-        nonisolated init(from decoder: any Decoder) throws {
-            let c = try decoder.container(keyedBy: CodingKeys.self)
-            runningContainerCount   = try c.decodeIfPresent(Int.self,    forKey: .runningContainerCount)   ?? 0
-            stoppedContainerCount   = try c.decodeIfPresent(Int.self,    forKey: .stoppedContainerCount)   ?? 0
-            healthyContainerCount   = try c.decodeIfPresent(Int.self,    forKey: .healthyContainerCount)   ?? 0
-            unhealthyContainerCount = try c.decodeIfPresent(Int.self,    forKey: .unhealthyContainerCount) ?? 0
-            volumeCount             = try c.decodeIfPresent(Int.self,    forKey: .volumeCount)             ?? 0
-            imageCount              = try c.decodeIfPresent(Int.self,    forKey: .imageCount)              ?? 0
-            stackCount              = try c.decodeIfPresent(Int.self,    forKey: .stackCount)              ?? 0
-            totalCPU                = try c.decodeIfPresent(Int.self,    forKey: .totalCPU)                ?? 0
-            totalMemory             = try c.decodeIfPresent(Int64.self,  forKey: .totalMemory)             ?? 0
-            dockerVersion           = try c.decodeIfPresent(String.self, forKey: .dockerVersion)
-            time                    = try c.decodeIfPresent(Int64.self,  forKey: .time)
-            let raw                 = try c.decodeIfPresent(RawSnapshot.self, forKey: .rawSnapshot)
-            networkCount            = raw?.networkCount ?? 0
         }
 
         /// The snapshot timestamp as a `Date`, or `nil` if absent.
